@@ -46,6 +46,8 @@ build:windows:
 rustdoc:
   stage: build
   image: rust
+  before_script:
+    - apt-get update && apt-get -y install clang golang
   script:
     - cargo doc
   artifacts:
