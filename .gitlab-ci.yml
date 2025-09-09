@@ -49,7 +49,7 @@ rustdoc:
   before_script:
     - apt-get update && apt-get -y install clang golang
   script:
-    - cargo doc
+    - cargo doc --no-deps
   artifacts:
     paths:
       - target/doc
