@@ -1,0 +1,70 @@
+stages:
+  - test
+  - build
+  - release
+  - publish
+
+test:
+  image: rust:latest
+  stage: test
+  before_script:
+    - apt-get update && apt-get -y install clang golang
+    - rustup toolchain install nightly
+    - rustup default nightly
+    - cargo install --root . cargo2junit
+  script:
+    - cargo test -- -Z unstable-options --format json --report-time | bin/cargo2junit > report.xml
+  artifacts:
+    when: always
+    reports:
+      junit:
+        - report.xml
+
+build:linux:
+  stage: build
+  image: rust:latest
+  artifacts:
+    paths:
+      - target/release/grustonnet-ls
+  before_script:
+    - apt-get update && apt-get -y install clang golang jsonnet
+  script:
+    - cargo build --release
+
+build:windows:
+  stage: build
+  image: rust:latest
+  artifacts:
+    paths:
+      - target/x86_64-pc-windows-gnu/release/grustonnet-ls.exe
+  before_script:
+    - apt-get update && apt-get -y install clang golang gcc-mingw-w64 jsonnet
+    - rustup target add x86_64-pc-windows-gnu
+  script:
+    - cargo build --release --target x86_64-pc-windows-gnu
+
+rustdoc:
+  stage: build
+  image: rust
+  script:
+    - cargo doc
+  artifacts:
+    paths:
+      - target/doc
+  only:
+    - main
+
+pages:
+  stage: publish
+  image: alpine
+  dependencies:
+    - rustdoc
+  script:
+    - mkdir -p public
+    - mv target/doc public/doc
+  artifacts:
+    paths:
+      - public
+  only:
+    - main
+
