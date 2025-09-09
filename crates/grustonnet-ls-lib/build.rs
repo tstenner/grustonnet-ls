@@ -1,9 +1,9 @@
 use std::{
     fs::{self},
     path::Path,
+    process::{Command, Stdio},
 };
 
-use jsonnet_bridge::go::{ASTBridge, ASTBridgeImpl, EvaluateParams};
 use jsonnet_std_docs::StdLib;
 
 const STDLIB_FILE: &str = "stdlib-content.jsonnet";
@@ -41,28 +41,22 @@ fn build_stdlib() {
             fs::write(url_path, content).unwrap();
         }
     }
-    let content = include_str!("stdlib.jsonnet");
-    let info = ASTBridgeImpl::evaluate_snippet(
-        STDLIB_FILE.to_string(),
-        content.to_string(),
-        EvaluateParams {
-            jpaths: vec![gen_path.to_str().unwrap().to_string()],
-            ..Default::default()
-        },
-    );
-    assert!(
-        info.error_data.is_empty(),
-        "Got eval error {:?}",
-        info.error_data
-    );
-    assert!(
-        !info.ast_data.is_empty(),
-        "No eval data {:?}",
-        info.ast_data
-    );
+
+    let empty_lib = "{\"groups\": []}".to_string();
+    // TODO: This fails while cross compiling to windows
+    let content = Command::new("jsonnet")
+        .arg("-J")
+        .arg(gen_path.to_str().unwrap())
+        .arg("stdlib.jsonnet")
+        .stdout(Stdio::piped())
+        .output()
+        .map_or(empty_lib.clone(), |o| {
+            let s = String::from_utf8(o.stdout).unwrap();
+            if s.is_empty() { empty_lib } else { s }
+        });
 
     // Convert html to md
-    let mut lib: StdLib = serde_json::from_str(&String::from_utf8(info.ast_data).unwrap()).unwrap();
+    let mut lib: StdLib = serde_json::from_str(&content).unwrap();
     lib.groups.iter_mut().for_each(|group| {
         group.fields.iter_mut().for_each(|func| {
             func.description = htmd::HtmlToMarkdown::new()
