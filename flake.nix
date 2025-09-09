@@ -98,6 +98,7 @@
             ++ [
               rust-analyzer
               go-jsonnet
+              go
             ];
           LIBCLANG_PATH = with pkgs; "${llvmPackages.libclang.lib}/lib";
         };
