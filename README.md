@@ -1,6 +1,85 @@
 # **G**o **R**ust Js**onnet** **L**anguage **S**erver
 This is a jsonnet language server using the `go-jsonnet` implementation to generate the AST and evaluate jsonnet code
 
+## Install
+
+### Getting the binary
+#### Using Cargo
+```bash
+cargo install --path .
+```
+
+#### Using Nix
+Either use this flake as an input or run
+```bash
+nix shell git+ssh://git@gitlab.ppidev.net/ct/std/grustonnet-ls.git
+```
+
+#### Using Gitlab (not on darwin)
+Until there is a proper release you con go into the latest pipeline and download the binary from `build:linux` or `build:windows`
+
+NOTE: Currently the windows version from the CI is lacking `std` completion support
+
+### Editors
+
+#### Neovim
+
+Add this file to your `[after/]lsp` folder. Put a `grustonnet.json` next to it with the configuration
+
+```lua
+local function getJson(filename)
+	local foundFile = vim.fs.find(filename, { path = vim.loop.cwd(), upward = true, type = "file" })[1]
+	if foundFile == nil then
+		return nil
+	end
+	local f = io.open(foundFile, "r")
+	if f == nil then
+		return nil
+	end
+	local data = f:read("*all")
+	return vim.json.decode(data)
+end
+
+local grustonnet_settings = getJson("./grustonnet.json");
+return {
+	--cmd = vim.lsp.rpc.connect("127.0.0.1", 4874),
+	cmd = { "grustonnet-ls" },
+	filetypes = { 'jsonnet', 'libsonnet' },
+	root_markers = { 'jsonnetfile.json', '.git' },
+	settings = grustonnet_settings,
+}
+
+```
+
+### (Evil-)Helix
+
+Add this to your `languages.toml`
+```toml
+[language-server.grustonnet-ls]
+command = "grustonnet-ls"
+
+[[language]]
+name = "jsonnet"
+language-servers = ["grustonnet-ls"]
+```
+
+### VCcodium
+
+TODO: For whatever reason a separate plugin is required
+
+### Intellij
+
+Install `lsp4all` and add the binary
+
+TODO: finish this documentation and how to get syntax highlights
+
+
+## Options
+To generate a schema with all the supported options run
+```bash
+grustonnet-ls --export-config-schema
+```
+
 ## Roadmap
 
 * [-] Completion
