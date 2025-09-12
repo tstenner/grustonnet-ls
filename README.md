@@ -28,26 +28,22 @@ Add this file to your `[after/]lsp` folder. Put a `grustonnet.json` next to it w
 
 ```lua
 local function getJson(filename)
-	local foundFile = vim.fs.find(filename, { path = vim.loop.cwd(), upward = true, type = "file" })[1]
-	if foundFile == nil then
-		return nil
-	end
-	local f = io.open(foundFile, "r")
-	if f == nil then
-		return nil
-	end
-	local data = f:read("*all")
-	return vim.json.decode(data)
+	-- https://neovim.io/doc/user/lua.html#lua-script-location
+	local current_file = debug.getinfo(1, "S").source:sub(2)
+	local current_dir = vim.fn.fnamemodify(current_file, ":h")
+
+	local file_content = vim.fn.readfile(current_dir .. "/" .. filename)
+	return vim.json.decode(table.concat(file_content, "\n"))
 end
 
-local grustonnet_settings = getJson("./grustonnet.json");
+local grustonnet_settings = getJson("grustonnet.json");
 return {
-	--cmd = vim.lsp.rpc.connect("127.0.0.1", 4874),
 	cmd = { "grustonnet-ls" },
 	filetypes = { 'jsonnet', 'libsonnet' },
 	root_markers = { 'jsonnetfile.json', '.git' },
 	settings = grustonnet_settings,
 }
+
 
 ```
 
@@ -69,9 +65,9 @@ TODO: For whatever reason a separate plugin is required
 
 ### Intellij
 
-Install `lsp4all` and add the binary
+Install [lsp4ij](https://plugins.jetbrains.com/plugin/23257-lsp4ij) and import the file `editors/intellij/lsp4ij.zip`
 
-TODO: finish this documentation and how to get syntax highlights
+TODO: how to get syntax highlights
 
 
 ## Options
