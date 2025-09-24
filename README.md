@@ -11,14 +11,16 @@ nix shell git+ssh://git@gitlab.ppidev.net/ct/std/grustonnet-ls.git
 
 ```
 #### Using Cargo
-Install go and rust and then run
+Install go, rust, and jsonnet (0.21+) and then run
 ```bash
 cargo install --path ./crates/grustonnet-bin
 ```
 
 
 #### Using Gitlab (not on darwin)
-Until there is a proper release you con go into the latest pipeline and download the binary from `build:linux` or `build:windows`
+Until there is a proper release you can go into the latest pipeline and download the binary from `build:linux` or `build:windows`
+
+Since cross compiling for OSX requires the Apple SDK, there are currently no pipeline builds for OSX
 
 ### Editors
 
