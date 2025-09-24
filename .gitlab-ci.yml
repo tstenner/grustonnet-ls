@@ -7,8 +7,11 @@ stages:
 test:
   image: rust:latest
   stage: test
+  variables:
+    GOBIN: "/usr/bin"
   before_script:
     - apt-get update && apt-get -y install clang golang
+    - go install github.com/google/go-jsonnet/cmd/jsonnet@latest
     - rustup toolchain install nightly
     - rustup default nightly
     - cargo install --root . cargo2junit
@@ -52,8 +55,11 @@ build:windows:
 rustdoc:
   stage: build
   image: rust
+  variables:
+    GOBIN: "/usr/bin"
   before_script:
     - apt-get update && apt-get -y install clang golang
+    - go install github.com/google/go-jsonnet/cmd/jsonnet@latest
   script:
     - cargo doc --no-deps
   artifacts:
