@@ -26,8 +26,11 @@ build:linux:
   artifacts:
     paths:
       - target/release/grustonnet-ls
+  variables:
+    GOBIN: "/usr/bin"
   before_script:
-    - apt-get update && apt-get -y install clang golang jsonnet
+    - apt-get update && apt-get -y install clang golang
+    - go install github.com/google/go-jsonnet/cmd/jsonnet@latest
   script:
     - cargo build --release
 
@@ -37,8 +40,11 @@ build:windows:
   artifacts:
     paths:
       - target/x86_64-pc-windows-gnu/release/grustonnet-ls.exe
+  variables:
+    GOBIN: "/usr/bin"
   before_script:
-    - apt-get update && apt-get -y install clang golang gcc-mingw-w64 jsonnet
+    - apt-get update && apt-get -y install clang golang gcc-mingw-w64
+    - go install github.com/google/go-jsonnet/cmd/jsonnet@latest
     - rustup target add x86_64-pc-windows-gnu
   script:
     - cargo build --release --target x86_64-pc-windows-gnu

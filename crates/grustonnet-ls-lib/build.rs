@@ -42,18 +42,14 @@ fn build_stdlib() {
         }
     }
 
-    let empty_lib = "{\"groups\": []}".to_string();
-    // TODO: This fails while cross compiling to windows
     let content = Command::new("jsonnet")
         .arg("-J")
         .arg(gen_path.to_str().unwrap())
         .arg("stdlib.jsonnet")
         .stdout(Stdio::piped())
         .output()
-        .map_or(empty_lib.clone(), |o| {
-            let s = String::from_utf8(o.stdout).unwrap();
-            if s.is_empty() { empty_lib } else { s }
-        });
+        .map(|o| String::from_utf8(o.stdout).unwrap())
+        .expect("Failed to build stdlib");
 
     // Convert html to md
     let mut lib: StdLib = serde_json::from_str(&content).unwrap();

@@ -4,21 +4,21 @@ This is a jsonnet language server using the `go-jsonnet` implementation to gener
 ## Install
 
 ### Getting the binary
-#### Using Cargo
-```bash
-cargo install --path .
-```
-
-#### Using Nix
+#### Using Nix (preferred way)
 Either use this flake as an input or run
 ```bash
 nix shell git+ssh://git@gitlab.ppidev.net/ct/std/grustonnet-ls.git
+
 ```
+#### Using Cargo
+Install go and rust and then run
+```bash
+cargo install --path ./crates/grustonnet-bin
+```
+
 
 #### Using Gitlab (not on darwin)
 Until there is a proper release you con go into the latest pipeline and download the binary from `build:linux` or `build:windows`
-
-NOTE: Currently the windows version from the CI is lacking `std` completion support
 
 ### Editors
 
