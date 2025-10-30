@@ -75,7 +75,41 @@ impl Node {
     pub fn get_stack_by_position(&self, pos: &Location) -> NodeStack {
         let mut stack: NodeStack = self
             .iter()
-            .filter(|child| child.node_base.loc_range.in_range(pos))
+            .filter_map(|child| {
+                // If the child has a zero position we'll just apply the position of the parent and
+                // use this as the new child
+                let zero_pos = Location { line: 0, column: 0 };
+                // Only clone the child if the location is actually 0
+                // TODO: If we fix the position of LiteralString etc. we'll try to complete that,
+                // which is obviously wrong
+                let child = if child.node_base.loc_range.begin == zero_pos
+                    && child.node_base.loc_range.end == zero_pos
+                    && !(matches!(*child.node_kind, NodeKind::LiteralString(_))
+                        || matches!(*child.node_kind, NodeKind::LiteralNumber(_))
+                        || matches!(*child.node_kind, NodeKind::LiteralBoolean(_))
+                        || matches!(*child.node_kind, NodeKind::LiteralNull))
+                {
+                    let mut child = child.as_ref().clone();
+                    println!(
+                        "Replacing {:?} with {:?}",
+                        child.node_base.loc_range, self.node_base.loc_range
+                    );
+                    child.node_base.loc_range = self.node_base.loc_range.clone();
+                    child.into()
+                } else {
+                    child
+                };
+                let in_range = child.node_base.loc_range.in_range(pos);
+                log::trace!(
+                    "Child {} ({:?}) in range of {:?}? {}",
+                    child.node_kind.variant_name(),
+                    child.node_base.loc_range,
+                    pos,
+                    in_range
+                );
+
+                if in_range { Some(child) } else { None }
+            })
             .map(|child| child.get_stack_by_position(pos))
             .collect();
         stack.push_front(Arc::new(self.clone()));
@@ -127,9 +161,10 @@ impl<'a> Iterator for NodeIter<'a> {
     type Item = Arc<Node>;
     fn next(&mut self) -> Option<Self::Item> {
         log::trace!(
-            "Next item {} at {:?}",
+            "Next item {} at {:?} ({})",
             self.root_node.node_kind,
-            self.root_node.node_base.loc_range.begin
+            self.root_node.node_base.loc_range.begin,
+            self.index,
         );
         if let Some(queue_node) = self.queue.pop() {
             return Some(queue_node);
@@ -198,11 +233,13 @@ impl<'a> Iterator for NodeIter<'a> {
             NodeKind::Apply(apply) => {
                 if self.index == 0 {
                     self.index += 1;
+                    log::trace!("Apply target {}", apply.target.node_kind);
                     return Some(apply.target.clone());
                 }
                 let mut offset = 1;
                 if let Some(arg) = apply.arguments.positional.get(self.index - offset) {
                     self.index += 1;
+                    log::trace!("Apply arg: {}", arg.expr.node_kind);
                     return Some(arg.expr.clone());
                 }
                 offset += apply.arguments.positional.len();
@@ -273,7 +310,9 @@ impl<'a> Iterator for NodeIter<'a> {
             | NodeKind::ImportStr(_)
             | NodeKind::ImportBin(_)
             | NodeKind::Dollar
-            | NodeKind::Other => (),
+            | NodeKind::Other => {
+                log::trace!("Unhandled {}", self.root_node.node_kind.variant_name())
+            }
         };
         None
     }
