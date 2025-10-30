@@ -62,6 +62,7 @@
         nativeBuildInputs = with pkgs; [
           go
 
+          go-jsonnet
           clang
           pkg-config
         ];
@@ -101,7 +102,6 @@
               cargo-tarpaulin
               clippy
 
-              go-jsonnet
               rust-analyzer
               bacon
               tracy
