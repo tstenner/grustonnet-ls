@@ -157,7 +157,7 @@ grustonnet-ls --export-config-schema
         * To reproduce `cat mydir/bar.jsonnet | jsonnet --jpath mydir -`
     * If there is a circular dependency go-jsonnet emits a strange error
 * Windows Specific Issues
-    * On Windows you need to set the environment variable `GODEBUG` to `invalidptr=0,cgocheck=0`
+    * On Windows the process will comsumes more memory than on other systems. To prevent this set the environment variable `GODEBUG` to `invalidptr=0,cgocheck=0`
 
 ## Jsonnet Quirks
 * `tailstrict`
