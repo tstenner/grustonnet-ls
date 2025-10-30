@@ -156,6 +156,8 @@ grustonnet-ls --export-config-schema
     * If you import `foo.libsonnet` and there is also a `foo.libsonnet` in the current working directory, evaluating the snippet will result in a diagnostic error
         * To reproduce `cat mydir/bar.jsonnet | jsonnet --jpath mydir -`
     * If there is a circular dependency go-jsonnet emits a strange error
+* Windows Specific Issues
+    * On Windows you need to set the environment variable `GODEBUG` to `invalidptr=0,cgocheck=0`
 
 ## Jsonnet Quirks
 * `tailstrict`
