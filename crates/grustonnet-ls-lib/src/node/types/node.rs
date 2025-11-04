@@ -90,9 +90,10 @@ impl Node {
                         || matches!(*child.node_kind, NodeKind::LiteralNull))
                 {
                     let mut child = child.as_ref().clone();
-                    println!(
+                    log::trace!(
                         "Replacing {:?} with {:?}",
-                        child.node_base.loc_range, self.node_base.loc_range
+                        child.node_base.loc_range,
+                        self.node_base.loc_range
                     );
                     child.node_base.loc_range = self.node_base.loc_range.clone();
                     child.into()
@@ -217,7 +218,28 @@ impl<'a> Iterator for NodeIter<'a> {
                     } else {
                         return Some(field.body.clone());
                     }
-                    // TODO: locals, asserts
+                }
+                let offset = obj.fields.len();
+                // Filter out the self nodes that are always present
+                // TODO: Check if these can be used and replace the current self/$/super logic
+                let filtered_locals: Vec<_> = obj
+                    .locals
+                    .iter()
+                    .filter(|b| {
+                        b.body
+                            .clone()
+                            .is_some_and(|n| !matches!(n.node_kind.as_ref(), NodeKind::SelfNode))
+                    })
+                    .collect();
+                if let Some(local) = filtered_locals.get(self.index - offset) {
+                    self.index += 1;
+                    return local.body.clone();
+                }
+
+                let offset = offset + filtered_locals.len();
+                if let Some(assert) = obj.asserts.get(self.index - offset) {
+                    self.index += 1;
+                    return Some(assert.clone().into());
                 }
             }
             // Var has no children

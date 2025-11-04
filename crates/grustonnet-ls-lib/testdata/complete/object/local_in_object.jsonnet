@@ -1,7 +1,5 @@
 local myVar = { key: 5 };
-
 {
-  local myLocal = myVar,
-  x: myLocal,
-  useMyVar: myVar,
+  local myObjVar = myVar,
+  x: myObjVar,
 }
