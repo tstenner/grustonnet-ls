@@ -49,12 +49,12 @@ async fn main() {
             // Pop first argument = executable
             args.pop_front();
 
-            //std::process::Command::new(exe)
-            //    .args(args)
-            //    .spawn()
-            //    .expect("Could not spawn child process")
-            //    .wait()
-            //    .unwrap();
+            std::process::Command::new(exe)
+                .args(args)
+                .spawn()
+                .expect("Could not spawn child process")
+                .wait()
+                .unwrap();
             std::process::exit(0);
         }
     }
