@@ -9,6 +9,7 @@ variables:
   GITLAB_HOST: gitlab.ppidev.net
   RELEASE_TOKEN: $RELEASE_TOKEN
   GLAB_SEND_TELEMETRY: false
+  GODEBUG: "invalidptr=0,cgocheck=0"
 
 test:
   image: rust:latest
