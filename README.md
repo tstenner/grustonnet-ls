@@ -61,13 +61,13 @@ name = "jsonnet"
 language-servers = ["grustonnet-ls"]
 ```
 
-### VCcodium
+### VSCodium
 
 TODO: For whatever reason a separate plugin is required
 
 ### Intellij
 
-Install [lsp4ij](https://plugins.jetbrains.com/plugin/23257-lsp4ij), download the build artifacts of the last `release:intellij` job, and extract it. In Intellij add a new language server and select `Import template`.
+Install [lsp4ij](https://plugins.jetbrains.com/plugin/23257-lsp4ij), download the [lsp4ij template](https://gitlab.ppidev.net/ct/std/apps/grustonnet-ls/-/releases/permalink/latest/downloads/lsp4ij.tar.gz) and extract it. In Intellij add a new language server and select `Import template`.
 
 Since Intellij does not offer support for proper syntax highlighting, the language server has a compatibility mode that bridges TreeSitter nodes to LSP semantic tokens. This is not perfect and you'll probably need to modify some colorscheme settings.
 
