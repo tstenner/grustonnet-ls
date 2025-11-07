@@ -1,8 +1,13 @@
 stages:
   - test
   - build
+  - editors
   - release
   - publish
+variables:
+  GITLAB_HOST: gitlab.ppidev.net
+  RELEASE_TOKEN: $RELEASE_TOKEN
+  GLAB_SEND_TELEMETRY: false
 
 test:
   image: rust:latest
@@ -52,11 +57,11 @@ build:windows:
   script:
     - cargo build --release --target x86_64-pc-windows-gnu
 
-release:intellij:
-  stage: release
+editors:intellij:
+  stage: editors
   image: rust:latest
   dependencies:
-    - build:linux
+    - "build:linux"
   artifacts:
     paths:
       - lsp4ij.tar.gz
@@ -66,8 +71,6 @@ release:intellij:
     - apt-get update && apt-get -y install golang
     - go install github.com/google/go-jsonnet/cmd/jsonnet@latest
   script:
-    - pwd
-    - ls *
     - ./target/release/grustonnet-ls --export-config-schema > ./editors/intellij/settings.schema.json
     - mkdir out && jsonnet -m out ./editors/intellij/template.jsonnet
     - tar cfz lsp4ij.tar.gz -C out .
@@ -88,6 +91,17 @@ rustdoc:
   only:
     - main
 
+release_job:
+  stage: release
+  image: gitlab/glab:latest
+  rules:
+    - if: $CI_COMMIT_TAG
+  script:
+    - glab auth login --token ${RELEASE_TOKEN} --hostname ${GITLAB_HOST}
+    - glab release create ${CI_COMMIT_TAG}
+    - tar cfz grustonnet_ls_windows_amd64.tar.gz -C target/x86_64-pc-windows-gnu/release . && glab release upload ${CI_COMMIT_TAG} grustonnet_ls_windows_amd64.tar.gz
+    - tar cfz grustonnet_ls_linux_amd64.tar.gz -C target/release . &&  glab release upload ${CI_COMMIT_TAG} grustonnet_ls_linux_amd64.tar.gz
+    - glab release upload ${CI_COMMIT_TAG} lsp4ij.tar.gz
 pages:
   stage: publish
   image: alpine
