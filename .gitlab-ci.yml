@@ -114,7 +114,7 @@ changelog:
     GIT_DEPTH: 0 # avoid shallow clone to give cliff all the info it needs
   stage: doc
   script:
-    - git-cliff -r . > CHANGELOG.md
+    - git-cliff -r . --current > CHANGELOG.md
   artifacts:
     paths:
       - CHANGELOG.md
