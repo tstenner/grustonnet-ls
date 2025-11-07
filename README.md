@@ -67,9 +67,9 @@ TODO: For whatever reason a separate plugin is required
 
 ### Intellij
 
-Install [lsp4ij](https://plugins.jetbrains.com/plugin/23257-lsp4ij) and import the file `editors/intellij/lsp4ij.zip`
+Install [lsp4ij](https://plugins.jetbrains.com/plugin/23257-lsp4ij), download the build artifacts of the last `release:intellij` job, and extract it. In Intellij add a new language server and select `Import template`.
 
-TODO: how to get syntax highlights
+Since Intellij does not offer support for proper syntax highlighting, the language server has a compatibility mode that bridges TreeSitter nodes to LSP semantic tokens. This is not perfect and you'll probably need to modify some colorscheme settings.
 
 
 ## Options

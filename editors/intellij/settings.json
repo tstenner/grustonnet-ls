@@ -1,0 +1,7 @@
+{
+  "$schema": "./settings.schema.json",
+  "semantic_tokens": {
+    "semantic_tokens": true,
+    "treesitter_tokens": true
+  }
+}

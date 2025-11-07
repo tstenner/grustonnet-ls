@@ -52,6 +52,26 @@ build:windows:
   script:
     - cargo build --release --target x86_64-pc-windows-gnu
 
+release:intellij:
+  stage: release
+  image: rust:latest
+  dependencies:
+    - build:linux
+  artifacts:
+    paths:
+      - lsp4ij.tar.gz
+  variables:
+    GOBIN: "/usr/bin"
+  before_script:
+    - apt-get update && apt-get -y install golang
+    - go install github.com/google/go-jsonnet/cmd/jsonnet@latest
+  script:
+    - pwd
+    - ls *
+    - ./target/release/grustonnet-ls --export-config-schema > ./editors/intellij/settings.schema.json
+    - mkdir out && jsonnet -m out ./editors/intellij/template.jsonnet
+    - tar cfz lsp4ij.tar.gz -C out .
+
 rustdoc:
   stage: build
   image: rust
@@ -81,4 +101,3 @@ pages:
       - public
   only:
     - main
-
