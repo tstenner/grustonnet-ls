@@ -10,6 +10,9 @@ variables:
   RELEASE_TOKEN: $RELEASE_TOKEN
   GLAB_SEND_TELEMETRY: false
   GODEBUG: "invalidptr=0,cgocheck=0"
+  KUBERNETES_CPU_REQUEST: "1"
+  KUBERNETES_EPHEMERAL_STORAGE_REQUEST: "8Gi"
+  KUBERNETES_MEMORY_REQUEST: "6Gi"
 
 test:
   image: rust:latest
@@ -69,6 +72,9 @@ editors:intellij:
       - lsp4ij.tar.gz
   variables:
     GOBIN: "/usr/bin"
+    KUBERNETES_CPU_REQUEST: "100m"
+    KUBERNETES_EPHEMERAL_STORAGE_REQUEST: "1Gi"
+    KUBERNETES_MEMORY_REQUEST: "1Gi"
   before_script:
     - apt-get update && apt-get -y install golang
     - go install github.com/google/go-jsonnet/cmd/jsonnet@latest
@@ -82,6 +88,9 @@ rustdoc:
   image: rust
   variables:
     GOBIN: "/usr/bin"
+    KUBERNETES_CPU_REQUEST: "100m"
+    KUBERNETES_EPHEMERAL_STORAGE_REQUEST: "1Gi"
+    KUBERNETES_MEMORY_REQUEST: "1Gi"
   before_script:
     - apt-get update && apt-get -y install clang golang
     - go install github.com/google/go-jsonnet/cmd/jsonnet@latest
@@ -113,6 +122,10 @@ changelog:
 release_job:
   stage: release
   image: gitlab/glab:latest
+  variables:
+    KUBERNETES_CPU_REQUEST: "100m"
+    KUBERNETES_EPHEMERAL_STORAGE_REQUEST: "1Gi"
+    KUBERNETES_MEMORY_REQUEST: "1Gi"
   rules:
     - if: $CI_COMMIT_TAG
   script:
@@ -127,6 +140,10 @@ pages:
   image: alpine
   dependencies:
     - rustdoc
+  variables:
+    KUBERNETES_CPU_REQUEST: "100m"
+    KUBERNETES_EPHEMERAL_STORAGE_REQUEST: "1Gi"
+    KUBERNETES_MEMORY_REQUEST: "1Gi"
   script:
     - mkdir -p public
     - mv target/doc public/doc
