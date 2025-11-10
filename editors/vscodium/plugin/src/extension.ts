@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import {
+    DidChangeConfigurationNotification,
     LanguageClient,
     type LanguageClientOptions,
     type ServerOptions,
@@ -7,7 +8,7 @@ import {
 
 let client: LanguageClient | null = null;
 
-export async function activate(_cx: vscode.ExtensionContext) {
+export async function activate(ctx: vscode.ExtensionContext) {
     if (client !== null) {
         return;
     }
@@ -34,6 +35,10 @@ export async function activate(_cx: vscode.ExtensionContext) {
     };
     client = new LanguageClient("grustonnet", serverOpts, clientOpts);
     await client.start();
+    ctx.subscriptions.push(
+        vscode.workspace.onDidChangeConfiguration(didChangeConfigurationHandler),
+    );
+    await didChangeConfigurationHandler();
 }
 
 export async function deactivate() {
@@ -42,4 +47,13 @@ export async function deactivate() {
     }
     await client.stop();
     client = null;
+}
+
+
+async function didChangeConfigurationHandler() {
+    const workspaceConfig = vscode.workspace.getConfiguration('grustonnet');
+    let config = workspaceConfig.get("config");
+    client.sendNotification(DidChangeConfigurationNotification.type, {
+        settings: config,
+    });
 }

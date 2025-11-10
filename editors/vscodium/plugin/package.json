@@ -58,7 +58,7 @@
         },
         "grustonnet.config": {
           "type": "object",
-          "markdownDescription": "Language Server Config (currently not working)"
+          "markdownDescription": "Language Server Config"
         }
       }
     },

@@ -66,7 +66,6 @@ language-servers = ["grustonnet-ls"]
 ### VSCodium
 
 Download [the plugin](https://gitlab.ppidev.net/ct/std/apps/grustonnet-ls/-/releases/permalink/latest/downloads/grustonnet.vsix) and install it.
-TODO: Changing the lsp settings is currently not working.
 
 ### Intellij
 
