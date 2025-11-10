@@ -14,12 +14,10 @@ pub mod var;
 use std::sync::Arc;
 
 use bincode::{Decode, Encode};
+use jsonnet_location::LocationRange;
 use serde::{Deserialize, Serialize};
 
-use crate::node::{
-    location::LocationRange,
-    types::{fodder::Fodder, local_bind::LocalBind, node::Node, node_kind::NodeKind},
-};
+use crate::node::types::{fodder::Fodder, local_bind::LocalBind, node::Node, node_kind::NodeKind};
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq, Decode, Encode)]
 #[serde(rename_all = "PascalCase")]
@@ -59,6 +57,8 @@ impl Local {
         Some(self.binds.first()?.variable.0.clone())
     }
 
+    // TODO: The end might include the body even for non functions. Maybe just calculate it all
+    // the time? But changing it breaks other stuff
     pub fn get_identifier_position(&self) -> Option<LocationRange> {
         // If the first bind is a function we need to fix the position
         let bind = self.binds.first()?;

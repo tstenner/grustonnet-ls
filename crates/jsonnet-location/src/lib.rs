@@ -1,6 +1,8 @@
 use bincode::{Decode, Encode};
-use lsp_types::Position;
+use lsp_types::{Position, Range};
 use serde::{Deserialize, Serialize};
+
+pub mod point;
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq, Decode, Encode)]
 #[serde(rename_all = "PascalCase")]
@@ -56,6 +58,25 @@ impl From<tree_sitter::Point> for Location {
         Self {
             line: value.row as i32 + 1,
             column: value.column as i32 + 1,
+        }
+    }
+}
+
+impl From<LocationRange> for lsp_types::Range {
+    fn from(val: LocationRange) -> Self {
+        Range {
+            start: val.begin.into(),
+            end: val.end.into(),
+        }
+    }
+}
+
+impl From<Range> for LocationRange {
+    fn from(value: Range) -> Self {
+        Self {
+            begin: value.start.into(),
+            end: value.end.into(),
+            ..Default::default()
         }
     }
 }

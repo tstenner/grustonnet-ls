@@ -1,5 +1,5 @@
+use assert_unordered::assert_eq_unordered;
 use language_server::{server::LSPServer, utils::UriHelper};
-use pretty_assertions::assert_eq;
 use std::{
     fs::read_to_string,
     sync::{Arc, RwLock},
@@ -8,7 +8,7 @@ use std::{
 pub use lsp_types::{Diagnostic, DiagnosticSeverity, Position, Range, Uri};
 
 use grustonnet_ls_lib::server::{
-    config::{Configuration, DiagnosticConfig},
+    config::{Configuration, DiagnosticConfig, VariableNaming},
     jsonnet::JsonnetServer,
 };
 
@@ -32,7 +32,11 @@ impl Default for DiagnosticTestCase {
             config: DiagnosticConfig {
                 enable_eval: true,
                 enable_go_lint: true,
-                enable_lint: false,
+                unused_variables: false,
+                variable_naming: VariableNaming::None,
+                local_function: false,
+                prevent_dollar: false,
+                recursive_arguments: false,
             },
         }
     }
@@ -82,6 +86,6 @@ impl DiagnosticTestCase {
             .iter_mut()
             .for_each(|diag| diag.code_description = None);
 
-        assert_eq!(diagnositcs, self.expected);
+        assert_eq_unordered!(diagnositcs, self.expected.clone());
     }
 }

@@ -5,6 +5,8 @@ use std::{
 
 use anyhow::Result;
 use bevy_tasks::TaskPool;
+use jsonnet_cst::completion::{CompletionInfo, CompletionType};
+use jsonnet_location::LocationRange;
 use language_server::{
     cache::Cache,
     completion::Completion,
@@ -15,12 +17,13 @@ use language_server::{
     utils::diff,
 };
 use lsp_types::{
-    CompletionList, CompletionOptions, CompletionParams, CompletionResponse, Diagnostic,
-    DidChangeConfigurationParams, DocumentDiagnosticParams, DocumentDiagnosticReportResult,
-    ExecuteCommandOptions, GotoDefinitionParams, GotoDefinitionResponse, InitializeParams,
-    InlayHint, InlayHintParams, OneOf, RelatedFullDocumentDiagnosticReport, SemanticTokens,
-    SemanticTokensOptions, SemanticTokensServerCapabilities, ServerCapabilities,
-    TextDocumentSyncKind, TextDocumentSyncOptions, Uri,
+    CodeActionOrCommand, CodeActionProviderCapability, CompletionList, CompletionOptions,
+    CompletionParams, CompletionResponse, Diagnostic, DidChangeConfigurationParams,
+    DocumentDiagnosticParams, DocumentDiagnosticReportResult, ExecuteCommandOptions,
+    GotoDefinitionParams, GotoDefinitionResponse, InitializeParams, InlayHint, InlayHintParams,
+    OneOf, RelatedFullDocumentDiagnosticReport, SemanticTokens, SemanticTokensOptions,
+    SemanticTokensServerCapabilities, ServerCapabilities, TextDocumentSyncKind,
+    TextDocumentSyncOptions, Uri,
 };
 
 use crate::{
@@ -31,14 +34,25 @@ use crate::{
         global::GlobalCompletion, import::ImportCompletion, keyword::KeywordCompletion,
         local::LocalCompletion,
     },
-    cst::completion::{CompletionInfo, CompletionType},
     definition::DefinitionProvider,
-    diagnostics::{eval::EvalDiagnostics, go_lint::GoLintDiagnostics, lint::LintDiagnostics},
+    diagnostics::{
+        ASTDiagnosticsHandler, JsonnetDiagnostics,
+        cst_linters::local_function::LocalFunctionDiagnostics,
+        eval::EvalDiagnostics,
+        filter::JsonnetDiagnosticFilter,
+        go_lint::GoLintDiagnostics,
+        linters::{
+            self,
+            dollar::DollarDiagnostics,
+            recursive_argument::RecursiveArgumentDiagnostic,
+            variable_naming::{SnakeCaseDiagnostics, VariableNamingDiagnostics},
+        },
+    },
     inlay_hint::{Inlay, apply::ApplyInlay, debug::DebugInlay, name::NameInlay},
     references::ReferenceProvider,
     rename::RenameProvider,
     semantic_tokens::{self, SemanticDataList},
-    server::config::Configuration,
+    server::config::{Configuration, VariableNaming},
     utils,
 };
 
@@ -50,12 +64,16 @@ pub struct JsonnetServer {
 
     pub configuration: Arc<RwLock<Configuration>>,
 
-    pub diagnostics_queue: Option<DiagnosticsQueue>,
+    pub diagnostics_queue: Option<DiagnosticsQueue<JsonnetDiagnosticFilter>>,
 }
 
 impl JsonnetServer {
     pub fn new(connection: LSPConnection) -> Self {
-        let diagnostics_queue = DiagnosticsQueue::new(connection.connection.sender.clone());
+        let cache = Cache::default();
+        let diagnostics_queue = DiagnosticsQueue::new(
+            connection.connection.sender.clone(),
+            JsonnetDiagnosticFilter::new(cache.clone()),
+        );
         let task_queue = diagnostics_queue.clone();
         bevy_tasks::ComputeTaskPool::get_or_init(bevy_tasks::TaskPool::default)
             .spawn(async move {
@@ -65,6 +83,7 @@ impl JsonnetServer {
         Self {
             diagnostics_queue: Some(diagnostics_queue),
             connection,
+            cache,
             ..Default::default()
         }
     }
@@ -80,12 +99,13 @@ impl JsonnetServer {
             let diags = GoLintDiagnostics::new(self.cache.clone()).diagnostics(uri);
             items.extend(diags);
         }
-        if config.diagnostics.enable_lint {
-            let diags = LintDiagnostics::new(self.cache.clone()).diagnostics(uri);
+        if config.diagnostics.unused_variables {
+            let diags =
+                linters::unused::UnusedDiagnostics::new(self.cache.clone()).diagnostics(uri);
             items.extend(diags);
         }
         // TODO: Filter messages with the same target but different severity
-        items
+        items.iter().map(|d| d.diagnostics.clone()).collect()
     }
 }
 
@@ -104,9 +124,42 @@ impl LSPServer for JsonnetServer {
         if config.diagnostics.enable_go_lint {
             diags.push(Box::new(GoLintDiagnostics::new(self.cache.clone())));
         }
-        if config.diagnostics.enable_lint {
-            diags.push(Box::new(LintDiagnostics::new(self.cache.clone())));
+        if config.diagnostics.unused_variables {
+            diags.push(Box::new(linters::unused::UnusedDiagnostics::new(
+                self.cache.clone(),
+            )));
         }
+
+        // TODO: Add a macro for all those settings
+        let mut diagnostics_handler_diags: Vec<Box<dyn JsonnetDiagnostics>> = vec![];
+
+        if let Some(naming_diag) = match config.diagnostics.variable_naming {
+            VariableNaming::SnakeCase => Some(Box::new(VariableNamingDiagnostics::<
+                SnakeCaseDiagnostics,
+            >::new())),
+            VariableNaming::None => None,
+        } {
+            diagnostics_handler_diags.push(naming_diag);
+        }
+
+        if config.diagnostics.prevent_dollar {
+            diagnostics_handler_diags.push(Box::new(DollarDiagnostics::default()));
+        }
+
+        if config.diagnostics.recursive_arguments {
+            diagnostics_handler_diags.push(Box::new(RecursiveArgumentDiagnostic::default()));
+        }
+
+        if config.diagnostics.local_function {
+            diags.push(Box::new(LocalFunctionDiagnostics {
+                cache: self.cache.clone(),
+            }));
+        }
+
+        diags.push(Box::new(ASTDiagnosticsHandler {
+            cache: self.cache.clone(),
+            diags: diagnostics_handler_diags,
+        }));
         if let Some(queue) = self.diagnostics_queue.as_ref() {
             queue.queue(uri.clone(), diags);
         }
@@ -158,6 +211,7 @@ impl LSPServer for JsonnetServer {
                 commands: vec!["jsonnet.evalFile".into()],
                 ..Default::default()
             }),
+            code_action_provider: Some(CodeActionProviderCapability::Simple(true)),
             ..Default::default()
         }
     }
@@ -447,5 +501,39 @@ impl LSPServer for JsonnetServer {
         params: <lsp_types::request::ExecuteCommand as lsp_types::request::Request>::Params,
     ) -> Result<LSPResponse, LSPError> {
         handle_command(&self.cache, params)
+    }
+
+    fn code_action(
+        &self,
+        params: <lsp_types::request::CodeActionRequest as lsp_types::request::Request>::Params,
+    ) -> Result<LSPResponse, LSPError> {
+        let actions: Vec<CodeActionOrCommand> = self
+            .diagnostics_queue
+            .clone()
+            .unwrap()
+            .current_diagnostics
+            .read()
+            .unwrap()
+            .iter()
+            .flat_map(|(_, d)| {
+                d.iter().flat_map(|d| {
+                    d.1.iter()
+                        .filter(|d| {
+                            let locrange: LocationRange = LocationRange {
+                                begin: d.diagnostics.range.start.into(),
+                                end: d.diagnostics.range.end.into(),
+                                ..Default::default()
+                            };
+                            locrange.in_range(&params.range.start.into())
+                        })
+                        .flat_map(|d| {
+                            d.code_actions
+                                .iter()
+                                .map(|action| CodeActionOrCommand::CodeAction(action.clone()))
+                        })
+                })
+            })
+            .collect();
+        Ok(actions.into())
     }
 }

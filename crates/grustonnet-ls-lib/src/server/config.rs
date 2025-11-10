@@ -23,6 +23,13 @@ pub struct CompletionConfig {
     pub hide_docsonnet_members: bool,
 }
 
+#[derive(Debug, Default, Serialize, Deserialize, Clone, JsonSchema)]
+pub enum VariableNaming {
+    #[default]
+    None,
+    SnakeCase,
+}
+
 #[derive(Debug, SmartDefault, Serialize, Deserialize, Clone, JsonSchema)]
 #[serde(default)]
 pub struct DiagnosticConfig {
@@ -35,8 +42,23 @@ pub struct DiagnosticConfig {
     pub enable_go_lint: bool,
 
     #[default = true]
-    /// Enable linting checks (currently limited to unused variables)
-    pub enable_lint: bool,
+    /// Enable linting for unused variables
+    pub unused_variables: bool,
+
+    /// Determines which type of variable naming diagnostics should be used
+    pub variable_naming: VariableNaming,
+
+    #[default = true]
+    /// Enable linting for correcting "local myFunc = function()" to "local myFunc()"
+    pub local_function: bool,
+
+    #[default = true]
+    /// Check for $ and display a hint to not use it. Yes I just hate it this much
+    pub prevent_dollar: bool,
+
+    #[default = true]
+    /// Checks the default arguments of functions for recursions
+    pub recursive_arguments: bool,
 }
 
 #[derive(Debug, SmartDefault, Serialize, Deserialize, Clone, JsonSchema)]
