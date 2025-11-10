@@ -24,6 +24,8 @@ Since cross compiling for OSX requires the Apple SDK, there are currently no pip
 
 ### Editors
 
+For all editors: Download the [latest release](https://gitlab.ppidev.net/ct/std/apps/grustonnet-ls/-/releases/permalink/latest) and put the binary in your path (or configure your plugin to directly point to the binary)
+
 #### Neovim
 
 Add this file to your `[after/]lsp` folder. Put a `grustonnet.json` next to it with the configuration
@@ -63,7 +65,8 @@ language-servers = ["grustonnet-ls"]
 
 ### VSCodium
 
-TODO: For whatever reason a separate plugin is required
+Download [the plugin](https://gitlab.ppidev.net/ct/std/apps/grustonnet-ls/-/releases/permalink/latest/downloads/grustonnet.vsix) and install it.
+TODO: Changing the lsp settings is currently not working.
 
 ### Intellij
 

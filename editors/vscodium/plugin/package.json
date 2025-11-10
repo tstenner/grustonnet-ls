@@ -1,0 +1,86 @@
+{
+  "private": true,
+  "name": "grustonnet",
+  "displayName": "grustonnet",
+  "version": "0.1.0",
+  "description": "Jsonnet support implemented in Rust",
+  "publisher": "koskev",
+  "author": "Kevin Köster",
+  "repository": {
+    "url": "",
+    "type": "git"
+  },
+  "license": "AGPL 3.0",
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "jsonnet",
+    "language server"
+  ],
+  "main": "out/main.js",
+  "scripts": {
+    "build-debug": "esbuild src/extension.ts --bundle --outfile=out/main.js --external:vscode --format=cjs --platform=node --target=node20",
+    "build-release": "npm run build-debug -- --minify",
+    "check": "tsc"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "@types/vscode": "^1.79.0",
+    "@vscode/vsce": "^3.1.0",
+    "esbuild": "^0.24.0",
+    "ovsx": "^0.10.0",
+    "typescript": "^5.1.6"
+  },
+  "engines": {
+    "vscode": "^1.79.0"
+  },
+  "activationEvents": [
+    "workspaceContains:**/*.{jsonnet,libsonnet,TEMPLATE}"
+  ],
+  "contributes": {
+    "configuration": {
+      "type": "object",
+      "title": "Jsonnet",
+      "properties": {
+        "grustonnet.server.enable": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Enable the language server."
+        },
+        "grustonnet.server.path": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Path to the `grustonnet-ls` executable.\n\nWhen set to the empty string `\"\"` (the default), `grustonnet-ls` is used."
+        },
+        "grustonnet.config": {
+          "type": "object",
+          "markdownDescription": "Language Server Config (currently not working)"
+        }
+      }
+    },
+    "languages": [
+      {
+        "id": "jsonnet",
+        "extensions": [
+          ".jsonnet",
+          ".libsonnet",
+          ".TEMPLATE"
+        ],
+        "aliases": [
+          "Jsonnet"
+        ]
+      }
+    ],
+    "grammars": [
+      {
+        "language": "jsonnet",
+        "scopeName": "source.jsonnet",
+        "path": "languages/jsonnet/syntax.json"
+      }
+    ]
+  }
+}
