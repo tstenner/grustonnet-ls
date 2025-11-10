@@ -1,86 +1,192 @@
 {
-  "private": true,
   "name": "grustonnet",
-  "displayName": "grustonnet",
+  "displayName": "Grustonnet Language Server",
+  "description": "Full code support (formatting, highlighting, navigation, debugging etc) for Jsonnet",
+  "license": "Apache License Version 2.0",
+  "publisher": "ppi",
   "version": "0.1.0",
-  "description": "Jsonnet support implemented in Rust",
-  "publisher": "koskev",
-  "author": "Kevin Köster",
   "repository": {
-    "url": "",
-    "type": "git"
+    "type": "git",
+    "url": ""
   },
-  "license": "AGPL 3.0",
+  "engines": {
+    "vscode": "^1.61.0"
+  },
   "categories": [
-    "Programming Languages"
+    "Programming Languages",
+    "Linters",
+    "Formatters",
+    "Debuggers"
   ],
   "keywords": [
     "jsonnet",
-    "language server"
+    "lsp",
+    "language",
+    "debugger"
   ],
-  "main": "out/main.js",
-  "scripts": {
-    "build-debug": "esbuild src/extension.ts --bundle --outfile=out/main.js --external:vscode --format=cjs --platform=node --target=node20",
-    "build-release": "npm run build-debug -- --minify",
-    "check": "tsc"
-  },
-  "dependencies": {
-    "vscode-languageclient": "^9.0.1"
-  },
-  "devDependencies": {
-    "@types/node": "^20.12.7",
-    "@types/vscode": "^1.79.0",
-    "@vscode/vsce": "^3.1.0",
-    "esbuild": "^0.24.0",
-    "ovsx": "^0.10.0",
-    "typescript": "^5.1.6"
-  },
-  "engines": {
-    "vscode": "^1.79.0"
-  },
   "activationEvents": [
-    "workspaceContains:**/*.{jsonnet,libsonnet,TEMPLATE}"
+    "onLanguage:jsonnet"
   ],
+  "main": "./out/extension",
   "contributes": {
-    "configuration": {
-      "type": "object",
-      "title": "Jsonnet",
-      "properties": {
-        "grustonnet.server.enable": {
-          "type": "boolean",
-          "default": true,
-          "markdownDescription": "Enable the language server."
-        },
-        "grustonnet.server.path": {
-          "type": "string",
-          "default": "",
-          "markdownDescription": "Path to the `grustonnet-ls` executable.\n\nWhen set to the empty string `\"\"` (the default), `grustonnet-ls` is used."
-        },
-        "grustonnet.config": {
-          "type": "object",
-          "markdownDescription": "Language Server Config"
+    "menus": {
+      "editor/title": [
+        {
+          "command": "jsonnet.evalFile2",
+          "alt": "jsonnet.evalFileYaml",
+          "group": "navigation"
         }
-      }
+      ],
+      "editor/title/run": [
+        {
+          "command": "jsonnet.debugEditorContents",
+          "when": "resourceLangId == jsonnet",
+          "group": "navigation@1"
+        }
+      ]
     },
+    "commands": [
+      {
+        "command": "jsonnet.evalFile2",
+        "title": "Jsonnet: Evaluate File",
+        "enablement": "resourceLangId == jsonnet",
+        "icon": "$(open-preview)"
+      },
+      {
+        "command": "jsonnet.restartLanguageServer",
+        "title": "Jsonnet: Restart Language Server"
+      },
+      {
+        "command": "jsonnet.debugEditorContents",
+        "title": "Jsonnet: Debug File",
+        "category": "Jsonnet",
+        "enablement": "!inDebugMode",
+        "icon": "$(debug-alt)"
+      }
+    ],
     "languages": [
       {
         "id": "jsonnet",
+        "aliases": [
+          "Jsonnet",
+          "jsonnet"
+        ],
         "extensions": [
           ".jsonnet",
-          ".libsonnet",
-          ".TEMPLATE"
+          ".libsonnet"
         ],
-        "aliases": [
-          "Jsonnet"
-        ]
+        "configuration": "./language/configuration.jsonc"
       }
     ],
     "grammars": [
       {
         "language": "jsonnet",
         "scopeName": "source.jsonnet",
-        "path": "languages/jsonnet/syntax.json"
+        "path": "./language/jsonnet.tmLanguage.json"
       }
-    ]
+    ],
+    "breakpoints": [
+      {
+        "language": "jsonnet"
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "jsonnet",
+        "languages": [
+          "jsonnet"
+        ],
+        "label": "Jsonnet Debugger",
+        "configurationAttributes": {
+          "launch": {
+            "required": [
+              "program",
+              "jpaths"
+            ],
+            "properties": {
+              "program": {
+                "type": "string",
+                "description": "jsonnet script to run"
+              },
+              "jpaths": {
+                "type": "array",
+                "description": "jsonnet search paths",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "initialConfigurations": [],
+        "configurationSnippets": [
+          {
+            "label": "Jsonnet: Debug current file",
+            "description": "A new configuration for debugging a Jsonnet file.",
+            "body": {
+              "type": "jsonnet",
+              "request": "launch",
+              "name": "Debug current JSONNET file",
+              "program": "^\"\\${file}\""
+            }
+          }
+        ]
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "Jsonnet Language Server",
+      "properties": {
+        "jsonnet.languageServer.pathToBinary": {
+          "scope": "resource",
+          "type": "string",
+          "description": "Path to language server binary",
+          "default": "grustonnet-ls"
+        },
+        "jsonnet.languageServer.continuousEval": {
+          "scope": "resource",
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to continuously evaluate the selected file"
+        },
+        "jsonnet.languageServer.config": {
+          "type": "object",
+          "markdownDescription": "Language Server Config"
+        },
+        "jsonnet.debugger.releaseRepository": {
+          "type": "string",
+          "default": "grafana/jsonnet-debugger",
+          "description": "Github repository to download the debugger server from"
+        },
+        "jsonnet.debugger.enableAutoUpdate": {
+          "scope": "resource",
+          "type": "boolean",
+          "default": true
+        },
+        "jsonnet.debugger.pathToBinary": {
+          "scope": "resource",
+          "type": "string",
+          "description": "Path to debugger"
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "@types/vscode": "^1.69.0",
+    "vscode-languageclient": "^8.0.0",
+    "yaml": "^1.10.2"
+  },
+  "devDependencies": {
+    "@types/node": "^12.12.0",
+    "@typescript-eslint/eslint-plugin": "^4.23.0",
+    "@typescript-eslint/parser": "^4.23.0",
+    "eslint": "^7.26.0",
+    "typescript": "^4.4.3"
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -b",
+    "watch": "tsc -b -w",
+    "lint": "eslint ./src --ext .ts,.tsx"
   }
 }

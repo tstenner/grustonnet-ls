@@ -72,7 +72,7 @@ editors:vscodium:
     - pushd editors/vscodium/plugin
     - npm install -g @vscode/vsce
     - npm i
-    - npm run build-release
+    - npm run compile
     - vsce package -o grustonnet.vsix
 
 editors:intellij:

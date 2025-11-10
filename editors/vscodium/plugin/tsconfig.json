@@ -1,15 +1,18 @@
 {
-  "compilerOptions": {
-    "target": "es6",
-    "module": "commonjs",
-    "moduleResolution": "node",
-    "sourceMap": false,
-    "inlineSources": false,
-    "declaration": true,
-    "stripInternal": true,
-    "lib": [
-      "es6"
-    ],
-    "outDir": "out"
-  }
+	"compilerOptions": {
+		"module": "commonjs",
+		"target": "es2019",
+		"lib": [
+			"ES2019"
+		],
+		"outDir": "out",
+		"rootDir": "src",
+		"sourceMap": true
+	},
+	"include": [
+		"src"
+	],
+	"exclude": [
+		"node_modules"
+	]
 }

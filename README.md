@@ -66,6 +66,7 @@ language-servers = ["grustonnet-ls"]
 ### VSCodium
 
 Download [the plugin](https://gitlab.ppidev.net/ct/std/apps/grustonnet-ls/-/releases/permalink/latest/downloads/grustonnet.vsix) and install it.
+The plugin includes basic syntax highlighting (you should still user proper highlighting with TreeSitter) and a (live) preview function.
 
 ### Intellij
 
