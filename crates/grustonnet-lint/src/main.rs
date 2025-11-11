@@ -10,6 +10,7 @@ use language_server::utils::{UriHelper, rope::RopeHelper};
 use lsp_types::{DiagnosticSeverity, Uri};
 use miette::{LabeledSpan, miette};
 use ropey::Rope;
+use std::collections::VecDeque;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -39,20 +40,38 @@ impl SeverityMap for DiagnosticSeverity {
 async fn main() {
     if std::env::var("GODEBUG").is_err() {
         // At this point we are single threaded. Therefore this is safe
+
         unsafe {
-            // Go seems to scan the stack an will panic upon encountering a 0x1 pointer.
-            // However, Rust does use this value in some cases
-            // If this turns out to be a problem we'll need to switch to an ipc based solution
             std::env::set_var("GODEBUG", "invalidptr=0,cgocheck=0");
         }
 
-        let exe = std::env::current_exe().expect("Could not get current exe");
-        let args = std::env::args();
+        let exe = std::env::current_exe().expect("Could not get path to the current executable");
 
-        let err = exec::execvp(exe, args);
+        // On Unix we can just use execvp and replace the current process
+        #[cfg(unix)]
+        {
+            let args: VecDeque<String> = std::env::args().collect();
+            let err = exec::execvp(&exe, &args);
+            eprintln!("Failed to restart with GODEBUG: {}", err);
+            std::process::exit(1);
+        }
+        // Windows does not support essential features and therefore we just spawn a child process
+        // and pass over stdin. This results in more memory usage, but that is the life on Windows
+        #[cfg(not(unix))]
+        {
+            let mut args: VecDeque<String> = std::env::args().collect();
+            println!("Args {:?}", args);
+            // Pop first argument = executable
+            args.pop_front();
 
-        eprintln!("Could not run execvp: {}", err);
-        std::process::exit(1);
+            std::process::Command::new(exe)
+                .args(args)
+                .spawn()
+                .expect("Could not spawn child process")
+                .wait()
+                .unwrap();
+            std::process::exit(0);
+        }
     }
 
     #[cfg(feature = "tracing")]

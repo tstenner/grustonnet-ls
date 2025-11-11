@@ -14,12 +14,13 @@ schemars = "1.0.1"
 clap = { version = "4.5.40", features = ["derive"] }
 serde_json = "1.0.140"
 tracy-client = { version = "0.18.2", optional = true }
-exec = "0.3.1"
 lsp-types = { version = "0.97.0", features = ["proposed"] }
 log = "0.4.27"
 miette = { version = "7.6.0", features = ["fancy"] }
 ropey = "1.6.1"
 glob = "0.3.3"
+[target.'cfg(unix)'.dependencies]
+exec = { version = "0.3.1" }
 
 [[bin]]
 name = "grustonnet-lint"
