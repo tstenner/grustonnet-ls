@@ -57,11 +57,36 @@ Add this to your `languages.toml`
 ```toml
 [language-server.grustonnet-ls]
 command = "grustonnet-ls"
+config = {}
 
 [[language]]
 name = "jsonnet"
 language-servers = ["grustonnet-ls"]
 ```
+
+However, you won't have completion for you config. One workaround is to just use jsonnet for your config and import a json:
+
+```jsonnet
+local config = {
+  'language-server': {
+    'grustonnet-ls': {
+      command: 'grustonnet-ls',
+      config: import './grustonnet.json',
+    },
+  },
+  language: [
+    {
+      name: 'jsonnet',
+      'language-servers': ['grustonnet-ls'],
+    },
+  ],
+
+};
+
+std.manifestTomlEx(config, ' ')
+```
+
+Compile it with `jsonnet -S config.jsonnet > ~/.config/helix/languages.toml`
 
 ### VSCodium
 
