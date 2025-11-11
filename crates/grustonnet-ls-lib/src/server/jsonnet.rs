@@ -10,7 +10,7 @@ use jsonnet_location::LocationRange;
 use language_server::{
     cache::Cache,
     completion::Completion,
-    diagnostics::{Diagnostics, DiagnosticsQueue},
+    diagnostics::{Diagnostics, DiagnosticsQueue, DiagnosticsResult},
     server::{
         LSPConnection, LSPError, LSPResponse, LSPServer, WorkProgressSender, get_response_error,
     },
@@ -18,10 +18,10 @@ use language_server::{
 };
 use lsp_types::{
     CodeActionOrCommand, CodeActionProviderCapability, CompletionList, CompletionOptions,
-    CompletionParams, CompletionResponse, Diagnostic, DidChangeConfigurationParams,
-    DocumentDiagnosticParams, DocumentDiagnosticReportResult, ExecuteCommandOptions,
-    GotoDefinitionParams, GotoDefinitionResponse, InitializeParams, InlayHint, InlayHintParams,
-    OneOf, RelatedFullDocumentDiagnosticReport, SemanticTokens, SemanticTokensOptions,
+    CompletionParams, CompletionResponse, DidChangeConfigurationParams, DocumentDiagnosticParams,
+    DocumentDiagnosticReportResult, ExecuteCommandOptions, GotoDefinitionParams,
+    GotoDefinitionResponse, InitializeParams, InlayHint, InlayHintParams, OneOf,
+    RelatedFullDocumentDiagnosticReport, SemanticTokens, SemanticTokensOptions,
     SemanticTokensServerCapabilities, ServerCapabilities, TextDocumentSyncKind,
     TextDocumentSyncOptions, Uri,
 };
@@ -88,34 +88,15 @@ impl JsonnetServer {
         }
     }
 
-    pub fn get_diagnostics(&self, uri: &Uri) -> Vec<Diagnostic> {
-        let mut items = vec![];
-        let config = self.configuration.read().unwrap().clone();
-        if config.diagnostics.enable_eval {
-            let diags = EvalDiagnostics::new(self.cache.clone()).diagnostics(uri);
-            items.extend(diags);
-        }
-        if config.diagnostics.enable_go_lint {
-            let diags = GoLintDiagnostics::new(self.cache.clone()).diagnostics(uri);
-            items.extend(diags);
-        }
-        if config.diagnostics.unused_variables {
-            let diags =
-                linters::unused::UnusedDiagnostics::new(self.cache.clone()).diagnostics(uri);
-            items.extend(diags);
-        }
-        // TODO: Filter messages with the same target but different severity
-        items.iter().map(|d| d.diagnostics.clone()).collect()
-    }
-}
-
-impl LSPServer for JsonnetServer {
-    type AstGenerator = JsonnetASTGenerator;
-    fn connection(&self) -> &LSPConnection {
-        &self.connection
+    pub fn get_diagnostics(&self, uri: &Uri) -> Vec<DiagnosticsResult> {
+        let diags = self.get_diagnostics_provider();
+        diags
+            .iter()
+            .flat_map(|diag| diag.diagnostics(uri))
+            .collect()
     }
 
-    fn queue_diagnostics(&self, uri: &Uri) {
+    fn get_diagnostics_provider(&self) -> Vec<Box<dyn Diagnostics>> {
         let config = self.configuration.read().unwrap().clone();
         let mut diags: Vec<Box<dyn Diagnostics>> = vec![];
         if config.diagnostics.enable_eval {
@@ -160,6 +141,18 @@ impl LSPServer for JsonnetServer {
             cache: self.cache.clone(),
             diags: diagnostics_handler_diags,
         }));
+        diags
+    }
+}
+
+impl LSPServer for JsonnetServer {
+    type AstGenerator = JsonnetASTGenerator;
+    fn connection(&self) -> &LSPConnection {
+        &self.connection
+    }
+
+    fn queue_diagnostics(&self, uri: &Uri) {
+        let diags = self.get_diagnostics_provider();
         if let Some(queue) = self.diagnostics_queue.as_ref() {
             queue.queue(uri.clone(), diags);
         }
@@ -270,7 +263,11 @@ impl LSPServer for JsonnetServer {
             DocumentDiagnosticReportResult::Report(lsp_types::DocumentDiagnosticReport::Full(
                 RelatedFullDocumentDiagnosticReport {
                     full_document_diagnostic_report: lsp_types::FullDocumentDiagnosticReport {
-                        items: self.get_diagnostics(&params.text_document.uri),
+                        items: self
+                            .get_diagnostics(&params.text_document.uri)
+                            .into_iter()
+                            .map(|d| d.diagnostics)
+                            .collect(),
                         ..Default::default()
                     },
                     ..Default::default()
