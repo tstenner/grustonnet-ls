@@ -39,6 +39,7 @@ build:linux:
   artifacts:
     paths:
       - target/release/grustonnet-ls
+      - target/release/grustonnet-lint
   variables:
     GOBIN: "/usr/bin"
   before_script:
@@ -53,6 +54,7 @@ build:windows:
   artifacts:
     paths:
       - target/x86_64-pc-windows-gnu/release/grustonnet-ls.exe
+      - target/x86_64-pc-windows-gnu/release/grustonnet-lint.exe
   variables:
     GOBIN: "/usr/bin"
   before_script:
