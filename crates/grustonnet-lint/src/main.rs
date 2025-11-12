@@ -19,6 +19,9 @@ struct Args {
 
     #[arg(long, short)]
     jpaths: Vec<String>,
+
+    #[arg(long, default_value_t = 2)]
+    fail_exit_code: i32,
 }
 
 trait SeverityMap {
@@ -110,12 +113,14 @@ async fn main() {
         .jsonnet
         .set_config(&server.configuration.read().unwrap().jsonnet);
     let filter = JsonnetDiagnosticFilter::new(server.cache.clone());
+    let mut found_issues = false;
     for path in &paths {
         let diags = server.get_diagnostics(&Uri::from_path(path).unwrap());
         let diags = filter.filter_diagnostics(&Uri::from_path(path).unwrap(), diags);
         let content = std::fs::read_to_string(path).unwrap();
         if !diags.is_empty() {
             eprintln!("Lint results for {:?}", path);
+            found_issues = true;
         }
         for diag in &diags {
             let source = content.clone();
@@ -146,5 +151,8 @@ async fn main() {
             .with_source_code(source);
             eprintln!("{:?}", report)
         }
+    }
+    if found_issues {
+        std::process::exit(args.fail_exit_code);
     }
 }
