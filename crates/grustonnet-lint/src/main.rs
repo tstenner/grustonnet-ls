@@ -102,6 +102,7 @@ async fn main() {
         .jsonnet
         .jpaths
         .extend(args.jpaths);
+    server.cache.ast_generator.jsonnet.set_root_dir(".");
     // TODO: this needs to go (how many TODOs do I have for this cursed config?)
     server
         .cache
