@@ -1,5 +1,5 @@
-from rust
+FROM debian
+COPY ./target/release/grustonnet-ls /usr/local/bin/grustonnet-ls
+COPY ./target/release/grustonnet-lint /usr/local/bin/grustonnet-lint
+CMD ["grustonnet-ls"]
 
-RUN apt-get update && apt-get -y install clang golang gcc-mingw-w64 jsonnet
-
-RUN rustup target add x86_64-pc-windows-gnu

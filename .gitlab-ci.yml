@@ -14,6 +14,13 @@ variables:
   KUBERNETES_EPHEMERAL_STORAGE_REQUEST: "8Gi"
   KUBERNETES_MEMORY_REQUEST: "6Gi"
 
+include:
+  - project: ct/admin/pipeline/default-pipelines
+    ref: master
+    file:
+      - base/image-jobs.yml
+      - base/generic-artifacts-jobs.yml
+
 test:
   image: rust:latest
   stage: test
@@ -168,3 +175,8 @@ pages:
       - public
   only:
     - main
+
+build-image:grustonnet:
+  needs:
+    - build:linux
+  extends: .CTSI_build-image
