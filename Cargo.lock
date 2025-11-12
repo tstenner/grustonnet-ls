@@ -801,6 +801,7 @@ dependencies = [
 name = "grustonnet-lint"
 version = "0.0.0"
 dependencies = [
+ "anyhow",
  "clap",
  "env_logger",
  "exec",
@@ -812,6 +813,7 @@ dependencies = [
  "miette",
  "ropey",
  "schemars",
+ "serde",
  "serde_json",
  "tokio",
  "tracy-client",
