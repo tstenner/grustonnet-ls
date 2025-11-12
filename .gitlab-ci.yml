@@ -180,3 +180,6 @@ build-image:grustonnet:
   needs:
     - build:linux
   extends: .CTSI_build-image
+
+release-image:grustonnet:
+  extends: .CTSI_release-image
