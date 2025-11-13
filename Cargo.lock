@@ -1288,6 +1288,7 @@ name = "jsonnet-location"
 version = "0.1.0"
 dependencies = [
  "bincode",
+ "language-server",
  "lsp-types",
  "serde",
  "tree-sitter",

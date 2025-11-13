@@ -11,6 +11,7 @@ use crate::{
     node::types::{
         Local,
         function::{Apply, Function},
+        literals::{LiteralNumber, LiteralString},
         node::Node,
         node_kind::NodeKind,
         var::Var,
@@ -24,11 +25,14 @@ pub mod go_lint;
 pub mod linters;
 
 pub struct JsonnetDiagnosticsContext {
-    cache: Cache<JsonnetASTGenerator>,
+    _cache: Cache<JsonnetASTGenerator>,
     uri: Uri,
 
     /// The generic node the function uses
     node: Arc<Node>,
+
+    /// The root node of the current document
+    root: Arc<Node>,
 }
 
 macro_rules! add_diag {
@@ -44,6 +48,12 @@ pub trait JsonnetDiagnostics: Send + Sync {
     add_diag!(check_var, var: &Var);
     add_diag!(check_apply, apply: &Apply);
     add_diag!(check_function, function: &Function);
+    add_diag!(check_literal_number, num: &LiteralNumber);
+    add_diag!(check_literal_string, str: &LiteralString);
+
+    fn check_after(&self) -> Option<Vec<DiagnosticsResult>> {
+        None
+    }
 
     fn get_name(&self) -> String;
 }
@@ -66,9 +76,10 @@ impl Diagnostics for ASTDiagnosticsHandler {
 
         for node in ast.get_complete_stack().stack.iter() {
             let ctx = JsonnetDiagnosticsContext {
-                cache: self.cache.clone(),
+                _cache: self.cache.clone(),
                 uri: uri.clone(),
                 node: node.clone(),
+                root: ast.clone(),
             };
             for diag in self.diags.iter() {
                 let res = match node.node_kind.as_ref() {
@@ -76,11 +87,18 @@ impl Diagnostics for ASTDiagnosticsHandler {
                     NodeKind::Var(var) => diag.check_var(&ctx, var),
                     NodeKind::Apply(apply) => diag.check_apply(&ctx, apply),
                     NodeKind::Function(function) => diag.check_function(&ctx, function),
+                    NodeKind::LiteralNumber(num) => diag.check_literal_number(&ctx, num),
+                    NodeKind::LiteralString(str) => diag.check_literal_string(&ctx, str),
                     _ => None,
                 };
                 if let Some(res) = res {
                     result.extend(res);
                 }
+            }
+        }
+        for diag in self.diags.iter() {
+            if let Some(res) = diag.check_after() {
+                result.extend(res);
             }
         }
         result

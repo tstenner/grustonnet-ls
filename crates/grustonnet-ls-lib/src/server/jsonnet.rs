@@ -44,7 +44,9 @@ use crate::{
         linters::{
             self,
             dollar::DollarDiagnostics,
+            duplicate_values::DuplicateValuesDiagnostic,
             recursive_argument::RecursiveArgumentDiagnostic,
+            shadow_variable::ShadowVariableDiagnostics,
             variable_naming::{SnakeCaseDiagnostics, VariableNamingDiagnostics},
         },
     },
@@ -114,6 +116,14 @@ impl JsonnetServer {
         // TODO: Add a macro for all those settings
         let mut diagnostics_handler_diags: Vec<Box<dyn JsonnetDiagnostics>> = vec![];
 
+        macro_rules! add_jsonnet_diag {
+            ($config_name: ident, $diag: ty) => {
+                if config.diagnostics.$config_name {
+                    diagnostics_handler_diags.push(Box::new(<$diag>::default()));
+                }
+            };
+        }
+
         if let Some(naming_diag) = match config.diagnostics.variable_naming {
             VariableNaming::SnakeCase => Some(Box::new(VariableNamingDiagnostics::<
                 SnakeCaseDiagnostics,
@@ -123,13 +133,14 @@ impl JsonnetServer {
             diagnostics_handler_diags.push(naming_diag);
         }
 
-        if config.diagnostics.prevent_dollar {
-            diagnostics_handler_diags.push(Box::new(DollarDiagnostics::default()));
-        }
+        add_jsonnet_diag!(prevent_dollar, DollarDiagnostics);
+        add_jsonnet_diag!(recursive_arguments, RecursiveArgumentDiagnostic);
+        add_jsonnet_diag!(shadow_variable, ShadowVariableDiagnostics);
 
-        if config.diagnostics.recursive_arguments {
-            diagnostics_handler_diags.push(Box::new(RecursiveArgumentDiagnostic::default()));
-        }
+        diagnostics_handler_diags.push(Box::new(DuplicateValuesDiagnostic {
+            config: config.diagnostics.duplicate_detection.clone(),
+            ..Default::default()
+        }));
 
         if config.diagnostics.local_function {
             diags.push(Box::new(LocalFunctionDiagnostics {

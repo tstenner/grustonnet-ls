@@ -39,6 +39,8 @@ impl Default for DiagnosticTestCase {
                 local_function: false,
                 prevent_dollar: false,
                 recursive_arguments: false,
+                shadow_variable: false,
+                duplicate_detection: false,
             },
         }
     }

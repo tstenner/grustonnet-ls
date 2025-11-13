@@ -32,6 +32,17 @@ pub enum VariableNaming {
 
 #[derive(Debug, SmartDefault, Serialize, Deserialize, Clone, JsonSchema)]
 #[serde(default)]
+pub struct DuplicateDetectionConfig {
+    #[default = 5]
+    /// The minimal length for a string to be considered
+    pub min_len: usize,
+    #[default = 3]
+    /// The minimum number of occurrences for it to be considered a duplicate. Set to 0 to disable
+    pub min_occurrences: usize,
+}
+
+#[derive(Debug, SmartDefault, Serialize, Deserialize, Clone, JsonSchema)]
+#[serde(default)]
 pub struct DiagnosticConfig {
     #[default = true]
     /// Enable diagnostics by evaluating the jsonnet file
@@ -59,6 +70,14 @@ pub struct DiagnosticConfig {
     #[default = true]
     /// Checks the default arguments of functions for recursions
     pub recursive_arguments: bool,
+
+    #[default = true]
+    /// Warns if a variable gets shadowed by another variable
+    pub shadow_variable: bool,
+
+    /// Warns if a literal value is used multiple times (currently limited to a single file and
+    /// literal strings)
+    pub duplicate_detection: DuplicateDetectionConfig,
 }
 
 #[derive(Debug, SmartDefault, Serialize, Deserialize, Clone, JsonSchema)]

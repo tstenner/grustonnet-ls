@@ -14,6 +14,8 @@ fn check_empty_diagnostics(val: &str) {
             local_function: false,
             prevent_dollar: false,
             recursive_arguments: false,
+            shadow_variable: false,
+            duplicate_detection: false,
         },
     }
     .check();
