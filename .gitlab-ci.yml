@@ -13,6 +13,8 @@ variables:
   KUBERNETES_CPU_REQUEST: "1"
   KUBERNETES_EPHEMERAL_STORAGE_REQUEST: "8Gi"
   KUBERNETES_MEMORY_REQUEST: "6Gi"
+  JSONNET_VERSION: "v0.21.0"
+  JSONNET_VERSION_NODE: "v0.20.0"
 
 include:
   - project: ct/admin/pipeline/default-pipelines
@@ -28,7 +30,7 @@ test:
     GOBIN: "/usr/bin"
   before_script:
     - apt-get update && apt-get -y install clang golang
-    - go install github.com/google/go-jsonnet/cmd/jsonnet@latest
+    - go install github.com/google/go-jsonnet/cmd/jsonnet@${JSONNET_VERSION}
     - rustup toolchain install nightly
     - rustup default nightly
     - cargo install --root . cargo2junit cargo-tarpaulin
@@ -51,13 +53,17 @@ build:linux:
     paths:
       - target/release/grustonnet-ls
       - target/release/grustonnet-lint
+      - schema.json
   variables:
     GOBIN: "/usr/bin"
+    EDITOR_PATH: "editors/vscodium/plugin"
   before_script:
     - apt-get update && apt-get -y install clang golang
-    - go install github.com/google/go-jsonnet/cmd/jsonnet@latest
+    - go install github.com/google/go-jsonnet/cmd/jsonnet@${JSONNET_VERSION}
   script:
     - cargo build --release
+    # Save a bunch of download and a stage by just creating the schema here
+    - ./target/release/grustonnet-ls --export-config-schema > schema.json
 
 build:windows:
   stage: build
@@ -70,7 +76,7 @@ build:windows:
     GOBIN: "/usr/bin"
   before_script:
     - apt-get update && apt-get -y install clang golang gcc-mingw-w64
-    - go install github.com/google/go-jsonnet/cmd/jsonnet@latest
+    - go install github.com/google/go-jsonnet/cmd/jsonnet@${JSONNET_VERSION}
     - rustup target add x86_64-pc-windows-gnu
   script:
     - cargo build --release --target x86_64-pc-windows-gnu
@@ -81,12 +87,15 @@ editors:vscodium:
   artifacts:
     paths:
       - editors/vscodium/plugin/grustonnet.vsix
+  variables:
+    GOBIN: "/usr/bin"
+    EDITOR_PATH: "editors/vscodium/plugin"
   script:
-    - pushd editors/vscodium/plugin
-    - npm install -g @vscode/vsce
-    - npm i
-    - npm run compile
-    - vsce package -o grustonnet.vsix
+    - ./target/release/grustonnet-ls --export-config-schema > $EDITOR_PATH/schema.json
+    - pushd $EDITOR_PATH
+    - apt-get update && apt-get -y install golang
+    - go install github.com/google/go-jsonnet/cmd/jsonnet@${JSONNET_VERSION_NODE}
+    - make
 
 editors:intellij:
   stage: editors
@@ -98,15 +107,16 @@ editors:intellij:
       - lsp4ij.tar.gz
   variables:
     GOBIN: "/usr/bin"
+    EDITOR_PATH: "editors/intellij"
     KUBERNETES_CPU_REQUEST: "100m"
     KUBERNETES_EPHEMERAL_STORAGE_REQUEST: "1Gi"
     KUBERNETES_MEMORY_REQUEST: "1Gi"
   before_script:
     - apt-get update && apt-get -y install golang
-    - go install github.com/google/go-jsonnet/cmd/jsonnet@latest
+    - go install github.com/google/go-jsonnet/cmd/jsonnet@${JSONNET_VERSION}
   script:
-    - ./target/release/grustonnet-ls --export-config-schema > ./editors/intellij/settings.schema.json
-    - mkdir out && jsonnet -m out ./editors/intellij/template.jsonnet
+    - ./target/release/grustonnet-ls --export-config-schema > $EDITOR_PATH/schema.json
+    - mkdir out && jsonnet -m out ${EDITOR_PATH}/template.jsonnet
     - tar cfz lsp4ij.tar.gz -C out .
 
 rustdoc:
@@ -119,7 +129,7 @@ rustdoc:
     KUBERNETES_MEMORY_REQUEST: "1Gi"
   before_script:
     - apt-get update && apt-get -y install clang golang
-    - go install github.com/google/go-jsonnet/cmd/jsonnet@latest
+    - go install github.com/google/go-jsonnet/cmd/jsonnet@${JSONNET_VERSION}
   script:
     - cargo doc --no-deps
   artifacts:

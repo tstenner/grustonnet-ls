@@ -3,7 +3,7 @@ use env_logger::Env;
 use grustonnet_ls_lib::server::{config::Configuration, jsonnet::JsonnetServer};
 use language_server::server::{LSPConnection, LSPServerManager};
 use rust2go_env::restart_with_fixed_env;
-use schemars::schema_for;
+use schemars::{generate::SchemaSettings, schema_for};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -24,10 +24,13 @@ async fn main() {
     let args = Args::parse();
 
     if args.export_config_schema {
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&schema_for!(Configuration)).unwrap()
-        );
+        let settings = SchemaSettings::draft07().with(|s| {
+            s.meta_schema = None;
+            s.inline_subschemas = true;
+        });
+        let generator = settings.into_generator();
+        let schema = generator.into_root_schema_for::<Configuration>();
+        println!("{}", serde_json::to_string_pretty(&schema).unwrap());
         return;
     }
     env_logger::Builder::from_env(Env::default().default_filter_or("warn")).init();
