@@ -791,6 +791,7 @@ dependencies = [
  "exec",
  "grustonnet-ls-lib",
  "language-server",
+ "rust2go-env",
  "schemars",
  "serde_json",
  "tokio",
@@ -812,6 +813,7 @@ dependencies = [
  "lsp-types",
  "miette",
  "ropey",
+ "rust2go-env",
  "schemars",
  "serde",
  "serde_json",
@@ -2136,6 +2138,13 @@ name = "rust2go-convert"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4c9b9dcfbeec346b228b700861dc2b43f32ab6679b6440db3eedc459ef024be"
+
+[[package]]
+name = "rust2go-env"
+version = "0.1.0"
+dependencies = [
+ "exec",
+]
 
 [[package]]
 name = "rust2go-macro"

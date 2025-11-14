@@ -13,7 +13,7 @@ use language_server::utils::{UriHelper, rope::RopeHelper};
 use lsp_types::{DiagnosticSeverity, Uri};
 use miette::{LabeledSpan, miette};
 use ropey::Rope;
-use std::collections::VecDeque;
+use rust2go_env::restart_with_fixed_env;
 
 use crate::code_quality::CodeClimate;
 
@@ -51,41 +51,7 @@ impl SeverityMap for DiagnosticSeverity {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    if std::env::var("GODEBUG").is_err() {
-        // At this point we are single threaded. Therefore this is safe
-
-        unsafe {
-            std::env::set_var("GODEBUG", "invalidptr=0,cgocheck=0");
-        }
-
-        let exe = std::env::current_exe().expect("Could not get path to the current executable");
-
-        // On Unix we can just use execvp and replace the current process
-        #[cfg(unix)]
-        {
-            let args: VecDeque<String> = std::env::args().collect();
-            let err = exec::execvp(&exe, &args);
-            eprintln!("Failed to restart with GODEBUG: {}", err);
-            std::process::exit(1);
-        }
-        // Windows does not support essential features and therefore we just spawn a child process
-        // and pass over stdin. This results in more memory usage, but that is the life on Windows
-        #[cfg(not(unix))]
-        {
-            let mut args: VecDeque<String> = std::env::args().collect();
-            println!("Args {:?}", args);
-            // Pop first argument = executable
-            args.pop_front();
-
-            std::process::Command::new(exe)
-                .args(args)
-                .spawn()
-                .expect("Could not spawn child process")
-                .wait()
-                .unwrap();
-            std::process::exit(0);
-        }
-    }
+    restart_with_fixed_env();
 
     #[cfg(feature = "tracing")]
     tracy_client::Client::start();
