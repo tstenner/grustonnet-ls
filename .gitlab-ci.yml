@@ -31,14 +31,18 @@ test:
     - go install github.com/google/go-jsonnet/cmd/jsonnet@latest
     - rustup toolchain install nightly
     - rustup default nightly
-    - cargo install --root . cargo2junit
+    - cargo install --root . cargo2junit cargo-tarpaulin
   script:
-    - cargo test -- -Z unstable-options --format json --report-time | bin/cargo2junit > report.xml
+    - bin/cargo-tarpaulin --tests --out xml --engine llvm --  -Z unstable-options --format=json | bin/cargo2junit > report.xml
+  coverage: '/^\d+.\d+% coverage/'
   artifacts:
     when: always
     reports:
       junit:
         - report.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: cobertura.xml
 
 build:linux:
   stage: build
