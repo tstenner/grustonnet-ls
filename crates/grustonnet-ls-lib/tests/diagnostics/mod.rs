@@ -2,6 +2,7 @@ use assert_unordered::assert_eq_unordered;
 use language_server::{server::LSPServer, utils::UriHelper};
 use std::{
     fs::read_to_string,
+    str::FromStr,
     sync::{Arc, RwLock},
 };
 
@@ -15,14 +16,22 @@ use grustonnet_ls_lib::server::{
 pub mod empty;
 pub mod error;
 pub mod runtime;
+pub mod shadow;
 pub mod snake;
 pub mod r#static;
 pub mod unused;
+
+#[derive(Default)]
+pub struct IgnoreFields {
+    message: bool,
+    source: bool,
+}
 
 pub(crate) struct DiagnosticTestCase {
     pub(crate) filename: String,
     pub(crate) expected: Vec<Diagnostic>,
     pub(crate) config: DiagnosticConfig,
+    pub(crate) ignore: IgnoreFields,
 }
 
 impl Default for DiagnosticTestCase {
@@ -44,6 +53,10 @@ impl Default for DiagnosticTestCase {
                     min_occurrences: 0,
                     ..Default::default()
                 },
+            },
+            ignore: IgnoreFields {
+                message: false,
+                source: true,
             },
         }
     }
@@ -89,15 +102,49 @@ impl DiagnosticTestCase {
 
         let diagnostics = server.get_diagnostics(&Uri::from_path(&self.filename).unwrap());
 
+        let remove_fields = |diag: &mut Diagnostic| {
+            if self.ignore.source {
+                diag.source = Some("".into());
+            }
+            if self.ignore.message {
+                diag.message = "".into();
+            }
+            if let Some(related) = &diag.related_information {
+                diag.related_information = Some(
+                    related
+                        .iter()
+                        .map(|r| {
+                            let mut r = r.clone();
+                            if self.ignore.message {
+                                r.message = "".into();
+                            }
+                            r.location.uri = Uri::from_str("file").unwrap();
+                            r
+                        })
+                        .collect(),
+                );
+            }
+        };
+
         let diagnostics: Vec<Diagnostic> = diagnostics
             .into_iter()
             .map(|d| d.diagnostics)
             .map(|mut diag| {
                 diag.code_description = None;
+                remove_fields(&mut diag);
+                diag
+            })
+            .collect();
+        let expected = self
+            .expected
+            .clone()
+            .into_iter()
+            .map(|mut diag| {
+                remove_fields(&mut diag);
                 diag
             })
             .collect();
 
-        assert_eq_unordered!(diagnostics, self.expected.clone());
+        assert_eq_unordered!(diagnostics, expected);
     }
 }
