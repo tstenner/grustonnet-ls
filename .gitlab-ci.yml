@@ -115,7 +115,7 @@ editors:intellij:
     - apt-get update && apt-get -y install golang
     - go install github.com/google/go-jsonnet/cmd/jsonnet@${JSONNET_VERSION}
   script:
-    - ./target/release/grustonnet-ls --export-config-schema > $EDITOR_PATH/schema.json
+    - ./target/release/grustonnet-ls --export-config-schema > $EDITOR_PATH/settings.schema.json
     - mkdir out && jsonnet -m out ${EDITOR_PATH}/template.jsonnet
     - tar cfz lsp4ij.tar.gz -C out .
 
