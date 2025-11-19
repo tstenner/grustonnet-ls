@@ -44,9 +44,11 @@ impl CodeClimate {
         Self {
             check_name: "linter".into(),
             location: Location {
+                // TODO: This only works if the cwd is "correct". Not critical since this is mostly
+                // for CI usage
                 path: absolute_path
                     .strip_prefix(current_dir)
-                    .unwrap()
+                    .unwrap_or(absolute_path)
                     .to_str()
                     .unwrap()
                     .to_string(),
