@@ -22,6 +22,8 @@ Until there is a proper release you can go into the latest pipeline and download
 
 Since cross compiling for OSX requires the Apple SDK, there are currently no pipeline builds for OSX
 
+The SDK can't (legally) be used on non Apple hardware. Therefore we would need a Gitlab runner using Apple hardware.
+
 ### Editors
 
 For all editors: Download the [latest release](https://gitlab.ppidev.net/ct/std/apps/grustonnet-ls/-/releases/permalink/latest) and put the binary in your path (or configure your plugin to directly point to the binary)
