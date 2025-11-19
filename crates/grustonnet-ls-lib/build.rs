@@ -42,17 +42,24 @@ fn build_stdlib() {
         }
     }
 
-    let content = Command::new("jsonnet")
+    let mut command = Command::new("jsonnet");
+    command
         .arg("-J")
         .arg(gen_path.to_str().unwrap())
-        .arg("stdlib.jsonnet")
+        .arg("stdlib.jsonnet");
+    let content = command
         .stdout(Stdio::piped())
         .output()
         .map(|o| String::from_utf8(o.stdout).unwrap())
-        .expect("Failed to build stdlib");
+        .unwrap_or_else(|_| panic!("Failed to build stdlib. You are most likely missing the \"jsonnet\" binary in your path. Command: {:?}", command));
 
     // Convert html to md
-    let mut lib: StdLib = serde_json::from_str(&content).unwrap();
+    let mut lib: StdLib = serde_json::from_str(&content).unwrap_or_else(|_| {
+        panic!(
+            "Failed to load stdlib from \"{}\". Compiled with {:?}",
+            content, command
+        )
+    });
     lib.groups.iter_mut().for_each(|group| {
         group.fields.iter_mut().for_each(|func| {
             func.description = htmd::HtmlToMarkdown::new()
