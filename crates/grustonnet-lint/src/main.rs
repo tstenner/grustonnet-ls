@@ -11,7 +11,7 @@ use grustonnet_ls_lib::{
 use language_server::diagnostics::DiagnosticFilter;
 use language_server::utils::{UriHelper, rope::RopeHelper};
 use lsp_types::{DiagnosticSeverity, Uri};
-use miette::{LabeledSpan, miette};
+use miette::LabeledSpan;
 use ropey::Rope;
 use rust2go_env::restart_with_fixed_env;
 
@@ -58,6 +58,19 @@ async fn main() -> Result<()> {
     let args = Args::parse();
 
     env_logger::Builder::from_env(Env::default().default_filter_or("fatal")).init();
+
+    let _ = miette::set_hook(Box::new(|_| {
+        Box::new(
+            miette::MietteHandlerOpts::new()
+                .terminal_links(true)
+                .unicode(false)
+                .color(true)
+                .context_lines(3)
+                .tab_width(4)
+                .break_words(true)
+                .build(),
+        )
+    }));
 
     let paths: Vec<PathBuf> = if args.path.is_dir() {
         glob::glob(&format!("{}/**/*.*sonnet", args.path.to_str().unwrap()))
@@ -108,23 +121,22 @@ async fn main() -> Result<()> {
             } else {
                 None
             };
-            let report = miette!(
-                labels = vec![LabeledSpan::at(
-                    start..end,
-                    format!(
-                        "{}{}",
-                        diag.diagnostics.message.clone(),
-                        fix_text.unwrap_or_default()
-                    )
-                ),],
-                severity = diag
-                    .diagnostics
+            let mut miette_diag = miette::MietteDiagnostic::new("Linter result");
+            miette_diag.labels = Some(vec![LabeledSpan::at(
+                start..end,
+                format!(
+                    "{}{}",
+                    diag.diagnostics.message.clone(),
+                    fix_text.unwrap_or_default()
+                ),
+            )]);
+            miette_diag.severity = Some(
+                diag.diagnostics
                     .severity
                     .unwrap_or(DiagnosticSeverity::ERROR)
                     .to_miette(),
-                "Linter result"
-            )
-            .with_source_code(source);
+            );
+            let report = miette::Report::from(miette_diag).with_source_code(source);
             eprintln!("{:?}", report)
         }
         code_climates.extend(

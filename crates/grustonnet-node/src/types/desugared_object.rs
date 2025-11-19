@@ -4,12 +4,13 @@ use std::{
 };
 
 use bincode::{Decode, Encode};
+use grustonnet_config::FormatOptions;
 use itertools::Itertools;
-use jsonnet_bridge::go::{ASTBridge, ASTBridgeImpl, FormatOptions};
+use jsonnet_bridge::go::{ASTBridge, ASTBridgeImpl};
 use jsonnet_location::{Location, LocationRange};
 use serde::{Deserialize, Serialize};
 
-use crate::node::types::{local_bind::LocalBind, node::Node, node_kind::NodeKind};
+use crate::types::{local_bind::LocalBind, node::Node, node_kind::NodeKind};
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq, Decode, Encode)]
 #[serde(rename_all = "PascalCase", tag = "T")]
