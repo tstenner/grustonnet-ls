@@ -11,7 +11,7 @@ nix shell git+ssh://git@gitlab.ppidev.net/ct/std/grustonnet-ls.git
 
 ```
 #### Using Cargo
-Install go, rust, and jsonnet (0.21+) and then run
+Install go, rust (1.88+), and jsonnet (0.21+) and then run
 ```bash
 cargo install --path ./crates/grustonnet-bin
 ```
