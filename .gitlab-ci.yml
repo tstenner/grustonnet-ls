@@ -56,7 +56,6 @@ build:linux:
       - schema.json
   variables:
     GOBIN: "/usr/bin"
-    EDITOR_PATH: "editors/vscodium/plugin"
   before_script:
     - apt-get update && apt-get -y install clang golang
     - go install github.com/google/go-jsonnet/cmd/jsonnet@${JSONNET_VERSION}
@@ -80,22 +79,6 @@ build:windows:
     - rustup target add x86_64-pc-windows-gnu
   script:
     - cargo build --release --target x86_64-pc-windows-gnu
-
-editors:vscodium:
-  stage: editors
-  image: node
-  artifacts:
-    paths:
-      - editors/vscodium/plugin/grustonnet.vsix
-  variables:
-    GOBIN: "/usr/bin"
-    EDITOR_PATH: "editors/vscodium/plugin"
-  script:
-    - ./target/release/grustonnet-ls --export-config-schema > $EDITOR_PATH/schema.json
-    - pushd $EDITOR_PATH
-    - apt-get update && apt-get -y install golang
-    - go install github.com/google/go-jsonnet/cmd/jsonnet@${JSONNET_VERSION_NODE}
-    - make
 
 editors:intellij:
   stage: editors
@@ -170,7 +153,6 @@ release_job:
     - tar cfz grustonnet_ls_windows_amd64.tar.gz -C target/x86_64-pc-windows-gnu/release . && glab release upload ${CI_COMMIT_TAG} grustonnet_ls_windows_amd64.tar.gz
     - tar cfz grustonnet_ls_linux_amd64.tar.gz -C target/release . &&  glab release upload ${CI_COMMIT_TAG} grustonnet_ls_linux_amd64.tar.gz
     - glab release upload ${CI_COMMIT_TAG} lsp4ij.tar.gz
-    - glab release upload ${CI_COMMIT_TAG} editors/vscodium/plugin/grustonnet.vsix
 
 pages:
   stage: publish

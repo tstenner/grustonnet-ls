@@ -92,8 +92,8 @@ Compile it with `jsonnet -S config.jsonnet > ~/.config/helix/languages.toml`
 
 ### VSCodium
 
-Download [the plugin](https://gitlab.ppidev.net/ct/std/apps/grustonnet-ls/-/releases/permalink/latest/downloads/grustonnet.vsix) and install it.
-The plugin includes basic syntax highlighting (you should still user proper highlighting with TreeSitter) and a (live) preview function.
+Download [the plugin](https://gitlab.ppidev.net/ct/std/apps/language-server/vscode-jsonnet/-/releases/permalink/latest/downloads/grustonnet.vsix) and install it.
+The plugin includes basic syntax highlighting, a (live) preview function, and a debugger.
 
 ### Intellij
 
