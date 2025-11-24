@@ -6,8 +6,11 @@ use std::{
 use anyhow::Result;
 use bevy_tasks::TaskPool;
 use grustonnet_config::{Configuration, VariableNaming};
-use jsonnet_cst::completion::{CompletionInfo, CompletionType};
-use jsonnet_location::LocationRange;
+use jsonnet_cst::{
+    completion::{CompletionInfo, CompletionType},
+    node::JsonnetNode,
+};
+use jsonnet_location::{Location, LocationRange};
 use language_server::{
     cache::Cache,
     completion::Completion,
@@ -17,14 +20,15 @@ use language_server::{
     },
     utils::diff,
 };
+use log::error;
 use lsp_types::{
     CodeActionOrCommand, CodeActionProviderCapability, CompletionList, CompletionOptions,
     CompletionParams, CompletionResponse, DidChangeConfigurationParams, DocumentDiagnosticParams,
     DocumentDiagnosticReportResult, ExecuteCommandOptions, GotoDefinitionParams,
     GotoDefinitionResponse, InitializeParams, InlayHint, InlayHintParams, OneOf,
-    RelatedFullDocumentDiagnosticReport, SemanticTokens, SemanticTokensOptions,
-    SemanticTokensServerCapabilities, ServerCapabilities, TextDocumentSyncKind,
-    TextDocumentSyncOptions, Uri,
+    ParameterInformation, ParameterLabel, RelatedFullDocumentDiagnosticReport, SemanticTokens,
+    SemanticTokensOptions, SemanticTokensServerCapabilities, ServerCapabilities, SignatureHelp,
+    SignatureHelpOptions, SignatureInformation, TextDocumentSyncKind, TextDocumentSyncOptions, Uri,
 };
 
 use crate::{
@@ -33,7 +37,7 @@ use crate::{
     command::handle_command,
     completion::{
         global::GlobalCompletion, import::ImportCompletion, keyword::KeywordCompletion,
-        local::LocalCompletion,
+        local::LocalCompletion, snippets::docsonnet::DocsonnetSnippets,
     },
     definition::DefinitionProvider,
     diagnostics::{
@@ -52,6 +56,7 @@ use crate::{
         },
     },
     inlay_hint::{Inlay, apply::ApplyInlay, debug::DebugInlay, name::NameInlay},
+    node::{NodeHelper, Stackhelper},
     references::ReferenceProvider,
     rename::RenameProvider,
     semantic_tokens::{self, SemanticDataList},
@@ -221,6 +226,10 @@ impl LSPServer for JsonnetServer {
                 ..Default::default()
             }),
             code_action_provider: Some(CodeActionProviderCapability::Simple(true)),
+            signature_help_provider: Some(SignatureHelpOptions {
+                trigger_characters: Some(vec!["(".into(), ",".into()]),
+                ..Default::default()
+            }),
             ..Default::default()
         }
     }
@@ -314,6 +323,10 @@ impl LSPServer for JsonnetServer {
                 if config.completion.enable_keywords {
                     let keyword_completion = KeywordCompletion::new(&self.cache);
                     completion_list.push(Box::new(keyword_completion));
+                }
+
+                if config.completion.snippets.docsonnet {
+                    completion_list.push(Box::new(DocsonnetSnippets {}));
                 }
             }
             CompletionType::Local => {
@@ -548,5 +561,54 @@ impl LSPServer for JsonnetServer {
             })
             .collect();
         Ok(actions.into())
+    }
+
+    fn signature_help(
+        &self,
+        params: <lsp_types::request::SignatureHelpRequest as lsp_types::request::Request>::Params,
+    ) -> Result<LSPResponse, LSPError> {
+        let doc = self
+            .cache
+            .get_document(&params.text_document_position_params.text_document.uri)?;
+        let ast = doc.get_ast()?;
+
+        let stack =
+            ast.get_stack_by_position(&params.text_document_position_params.position.into());
+
+        Ok(stack
+            .stack
+            .iter()
+            .find_map(|n| {
+                let (apply_node, found_function) =
+                    n.get_apply_function(ast.clone(), &self.cache)?;
+                let func_name = apply_node.get_name().unwrap_or("unknown".into());
+                let func_params = &found_function.parameters;
+                let names: Vec<String> = func_params.iter().map(|p| p.name.0.clone()).collect();
+                let cst_tree = jsonnet_cst::new_tree(&doc.content)?;
+                let cst_loc: Location = params.text_document_position_params.position.into();
+                let root_node = cst_tree.root_node();
+                let cst_node = root_node.get_node_at(cst_loc.into())?;
+                let active_param = cst_node.get_param_pos();
+                Some(SignatureHelp {
+                    signatures: vec![SignatureInformation {
+                        label: format!("{}({})", func_name, names.join(", ")),
+                        active_parameter: Some(active_param),
+                        documentation: None,
+                        parameters: Some(
+                            names
+                                .iter()
+                                .map(|name| ParameterInformation {
+                                    label: ParameterLabel::Simple(name.clone()),
+                                    // TODO: get docsonnet documentation
+                                    documentation: None,
+                                })
+                                .collect(),
+                        ),
+                    }],
+                    active_signature: Some(0),
+                    active_parameter: Some(active_param),
+                })
+            })
+            .into())
     }
 }
