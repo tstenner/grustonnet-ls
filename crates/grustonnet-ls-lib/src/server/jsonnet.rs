@@ -184,6 +184,7 @@ impl LSPServer for JsonnetServer {
                 .jsonnet
                 .set_root_dir(workspaces.first().unwrap().uri.path().as_str());
         }
+        log::info!("Starting with workpaces: {:?}", workspaces);
     }
 
     fn cache(&self) -> &Cache<Self::AstGenerator> {
@@ -239,6 +240,7 @@ impl LSPServer for JsonnetServer {
         &self,
         params: DidChangeConfigurationParams,
     ) -> Result<(), LSPError> {
+        log::debug!("LSP Configuration changed to: {:?}", params);
         let new_config = match Configuration::try_from(params) {
             Ok(conf) => conf,
             Err(e) => {
@@ -256,6 +258,17 @@ impl LSPServer for JsonnetServer {
             .set_config(&new_config.jsonnet);
 
         *self.configuration.write().unwrap() = new_config.clone();
+
+        log::info!(
+            "Config changed. New Jpaths are {:?}",
+            self.cache
+                .ast_generator
+                .jsonnet
+                .params
+                .read()
+                .unwrap()
+                .jpaths
+        );
 
         if new_config.jsonnet.preload_files {
             let eval_params = self.cache.ast_generator.jsonnet.get_evaluate_params(".");
