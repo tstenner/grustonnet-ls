@@ -34,7 +34,7 @@ async fn main() {
         println!("{}", serde_json::to_string_pretty(&schema).unwrap());
         return;
     }
-    env_logger::Builder::from_env(Env::default().default_filter_or("warn")).init();
+    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
     let connection = if let Some(port) = args.port {
         LSPConnection::new_network(port)
     } else {
