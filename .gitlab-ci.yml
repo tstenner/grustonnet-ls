@@ -154,6 +154,46 @@ release_job:
     - tar cfz grustonnet_ls_linux_amd64.tar.gz -C target/release . &&  glab release upload ${CI_COMMIT_TAG} grustonnet_ls_linux_amd64.tar.gz
     - glab release upload ${CI_COMMIT_TAG} lsp4ij.tar.gz
 
+release:grustonnet-ls:
+  extends: .CTSI_upload-generic-file
+  stage: release
+  variables:
+    CIY_ARTIFACT_SOURCE_PATH: target/release/grustonnet-ls
+    CIY_ARTIFACT_TARGET_PATH: de/ppi/std/grustonnet-ls/${CI_COMMIT_TAG}-grustonnet-ls
+    CIY_GENERIC_REPO_NAME: std-generic-dmz
+  rules:
+    - if: $CI_COMMIT_TAG
+
+release:grustonnet-ls-windows:
+  extends: .CTSI_upload-generic-file
+  stage: release
+  variables:
+    CIY_ARTIFACT_SOURCE_PATH: target/x86_64-pc-windows-gnu/release/grustonnet-ls.exe
+    CIY_ARTIFACT_TARGET_PATH: de/ppi/std/grustonnet-ls/${CI_COMMIT_TAG}-grustonnet-ls.exe
+    CIY_GENERIC_REPO_NAME: std-generic-dmz
+  rules:
+    - if: $CI_COMMIT_TAG
+
+release:grustonnet-ls-latest:
+  extends: .CTSI_upload-generic-file
+  stage: release
+  variables:
+    CIY_ARTIFACT_SOURCE_PATH: target/release/grustonnet-ls
+    CIY_ARTIFACT_TARGET_PATH: de/ppi/std/grustonnet-ls/grustonnet-ls
+    CIY_GENERIC_REPO_NAME: std-generic-dmz
+  rules:
+    - if: $CI_COMMIT_TAG
+
+release:grustonnet-ls-windows-latest:
+  extends: .CTSI_upload-generic-file
+  stage: release
+  variables:
+    CIY_ARTIFACT_SOURCE_PATH: target/x86_64-pc-windows-gnu/release/grustonnet-ls.exe
+    CIY_ARTIFACT_TARGET_PATH: de/ppi/std/grustonnet-ls/grustonnet-ls.exe
+    CIY_GENERIC_REPO_NAME: std-generic-dmz
+  rules:
+    - if: $CI_COMMIT_TAG
+
 pages:
   stage: publish
   image: alpine
