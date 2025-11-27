@@ -6,7 +6,7 @@ use crate::diagnostics::DiagnosticTestCase;
 #[test]
 fn obj_error() {
     DiagnosticTestCase {
-        filename: "testdata/diagnostics/docsonnet/obj_default_correct.jsonnet".to_string(),
+        filename: "testdata/diagnostics/docsonnet/obj_default_error.jsonnet".to_string(),
         config: DiagnosticConfig {
             docsonnet_default: true,
             ..Default::default()
