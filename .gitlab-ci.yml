@@ -15,7 +15,6 @@ variables:
   KUBERNETES_MEMORY_REQUEST: "6Gi"
   JSONNET_VERSION: "v0.21.0"
   JSONNET_VERSION_NODE: "v0.20.0"
-  GRUSTONNET_VERSION: ${$CI_COMMIT_TAG:-0.0.0}
 
 include:
   - project: ct/admin/pipeline/default-pipelines
@@ -24,10 +23,7 @@ include:
       - base/image-jobs.yml
       - base/generic-artifacts-jobs.yml
 
-.set-version:
-  before_script:
-    - cargo install cargo-set-version
-    - cargo set-version $GRUSTONNET_VERSION
+.set-version: &set-version cargo install cargo-set-version && cargo set-version ${CI_COMMIT_TAG:-0.0.0}
 
 test:
   image: rust:latest
@@ -62,8 +58,8 @@ build:linux:
       - schema.json
   variables:
     GOBIN: "/usr/bin"
-  extends: .set-version
   before_script:
+    - *set-version
     - apt-get update && apt-get -y install clang golang
     - go install github.com/google/go-jsonnet/cmd/jsonnet@${JSONNET_VERSION}
   script:
@@ -80,8 +76,8 @@ build:windows:
       - target/x86_64-pc-windows-gnu/release/grustonnet-lint.exe
   variables:
     GOBIN: "/usr/bin"
-  extends: .set-version
   before_script:
+    - *set-version
     - apt-get update && apt-get -y install clang golang gcc-mingw-w64
     - go install github.com/google/go-jsonnet/cmd/jsonnet@${JSONNET_VERSION}
     - rustup target add x86_64-pc-windows-gnu
