@@ -348,7 +348,7 @@ impl LSPServer for JsonnetServer {
                 }
 
                 if config.completion.snippets.docsonnet {
-                    completion_list.push(Box::new(DocsonnetSnippets {}));
+                    completion_list.push(Box::new(DocsonnetSnippets::new(&self.cache)));
                 }
             }
             CompletionType::Local => {
@@ -557,7 +557,7 @@ impl LSPServer for JsonnetServer {
     ) -> Result<LSPResponse, LSPError> {
         let actions: Vec<CodeActionOrCommand> = self
             .diagnostics_queue
-            .clone()
+            .as_ref()
             .unwrap()
             .current_diagnostics
             .read()
