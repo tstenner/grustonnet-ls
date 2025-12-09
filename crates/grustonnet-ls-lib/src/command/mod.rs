@@ -45,7 +45,6 @@ pub fn handle_command(
                 .ast_generator
                 .jsonnet
                 .evaluate_snippet(&eval_file_arguments, &document.content);
-            log::error!("EVAL: {:?}", eval_result);
             return match eval_result {
                 Ok(res) => Ok(res.into()),
                 Err(e) => Ok(format!(
