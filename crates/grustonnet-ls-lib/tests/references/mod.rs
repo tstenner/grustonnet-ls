@@ -132,6 +132,48 @@ fn simple() {
 }
 
 #[test]
+// Make sure the filename is checked
+fn simple_copy() {
+    ReferenceTestCase {
+        filename: "testdata/references/simple_copy.jsonnet".into(),
+        source: Position {
+            line: 5,
+            character: 7,
+        },
+        targets: vec![
+            TargetInfo {
+                range: Range {
+                    start: Position {
+                        line: 1,
+                        character: 6,
+                    },
+                    end: Position {
+                        line: 1,
+                        character: 10,
+                    },
+                },
+                ..Default::default()
+            },
+            TargetInfo {
+                range: Range {
+                    start: Position {
+                        line: 5,
+                        character: 5,
+                    },
+                    end: Position {
+                        line: 5,
+                        character: 9,
+                    },
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+    .check();
+}
+
+#[test]
 fn object() {
     ReferenceTestCase {
         filename: "testdata/references/object.jsonnet".into(),
@@ -162,6 +204,48 @@ fn object() {
                     end: Position {
                         line: 5,
                         character: 14,
+                    },
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+    .check();
+}
+
+#[test]
+// Previously some other files in complete/function were wrongfully found as a reference
+fn wrong_other_files() {
+    ReferenceTestCase {
+        filename: "testdata/references/function_in_object_reference.jsonnet".into(),
+        source: Position {
+            line: 2,
+            character: 7,
+        },
+        targets: vec![
+            TargetInfo {
+                range: Range {
+                    start: Position {
+                        line: 1,
+                        character: 9,
+                    },
+                    end: Position {
+                        line: 1,
+                        character: 12,
+                    },
+                },
+                ..Default::default()
+            },
+            TargetInfo {
+                range: Range {
+                    start: Position {
+                        line: 2,
+                        character: 7,
+                    },
+                    end: Position {
+                        line: 2,
+                        character: 10,
                     },
                 },
                 ..Default::default()

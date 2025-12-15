@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     stack::NodeStack,
-    types::{base::NodeBase, node_kind::NodeKind},
+    types::{base::NodeBase, function::Parameter, node_kind::NodeKind, var::Var},
 };
 
 impl ASTNode for Node {}
@@ -183,6 +183,17 @@ impl<'a> Iterator for NodeIter<'a> {
         if let Some(queue_node) = self.queue.pop() {
             return Some(queue_node);
         }
+        let get_param_node = |param: &Parameter| -> Option<Arc<Node>> {
+            Some(param.default_arg.clone().unwrap_or(Arc::new(Node {
+                node_base: NodeBase {
+                    loc_range: param.loc_range.clone(),
+                    ..Default::default()
+                },
+                node_kind: Box::new(NodeKind::Var(Var {
+                    id: Some(param.name.clone()),
+                })),
+            })))
+        };
         match self.root_node.node_kind.as_ref() {
             NodeKind::Array(arr) => {
                 if let Some(element) = arr.elements.get(self.index) {
@@ -204,13 +215,14 @@ impl<'a> Iterator for NodeIter<'a> {
                 }
             }
             NodeKind::Function(func) => {
-                if self.index == 0 {
+                // Add the params first, as they might be used in the body
+                if let Some(param) = func.parameters.get(self.index) {
+                    self.index += 1;
+                    return get_param_node(param);
+                }
+                if self.index == func.parameters.len() {
                     self.index += 1;
                     return Some(func.body.clone());
-                }
-                if let Some(param) = func.parameters.get(self.index - 1) {
-                    self.index += 1;
-                    return param.default_arg.clone();
                 }
                 return None;
             }
@@ -222,10 +234,7 @@ impl<'a> Iterator for NodeIter<'a> {
                     // properly get the parameters
                     self.queue.push(field.name.clone());
                     if let NodeKind::Function(func) = field.body.node_kind.as_ref() {
-                        let params = func
-                            .parameters
-                            .iter()
-                            .filter_map(|parameter| parameter.default_arg.clone());
+                        let params = func.parameters.iter().filter_map(get_param_node);
                         self.queue.extend(params);
                         return Some(func.body.clone());
                     } else {
