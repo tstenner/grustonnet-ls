@@ -221,6 +221,7 @@ pages:
   image: alpine
   dependencies:
     - rustdoc
+    - mdbook
   variables:
     KUBERNETES_CPU_REQUEST: "100m"
     KUBERNETES_EPHEMERAL_STORAGE_REQUEST: "1Gi"
