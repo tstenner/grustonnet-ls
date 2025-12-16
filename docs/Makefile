@@ -1,4 +1,4 @@
 build:
 	npm install
-	bash ./recordings/compile.sh
+	bash -x ./recordings/compile.sh
 	mdbook build
