@@ -1,4 +1,5 @@
 build:
 	npm install
-	bash -x ./recordings/compile.sh
+	bash ./recordings/compile.sh
+	git-cliff --workdir .. -o changelog.md
 	mdbook build

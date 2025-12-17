@@ -24,7 +24,10 @@
             customRC = ''
               lua <<EOF
                 require("snacks").setup({
-                  input = {}
+                  input = {
+                    icon = ""
+                  },
+                  notifier = {}
                 })
                 require("telescope").setup({
                   extensions = {
@@ -104,7 +107,9 @@
           tmux
           bash
           mdbook
+          git-cliff
           nodejs
+          coreutils
         ];
 
       in
