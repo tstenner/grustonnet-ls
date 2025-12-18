@@ -36,6 +36,8 @@ conform:
     - go install github.com/siderolabs/conform/cmd/conform@latest
   script:
     - conform enforce --base-branch main~1
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
 test:
   image: rust:latest
