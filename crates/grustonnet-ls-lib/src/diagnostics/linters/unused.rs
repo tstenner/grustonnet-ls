@@ -1,7 +1,8 @@
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
-use grustonnet_node::types::{Local, base::NodeBase, node::Node, node_kind::NodeKind};
-use jsonnet_location::Location;
+use grustonnet_config::UnusedVariablesConfig;
+use grustonnet_node::types::{function::Function, node_kind::NodeKind};
+use jsonnet_location::{Location, LocationRange};
 use language_server::{
     cache::Cache,
     diagnostics::{Diagnostics, DiagnosticsResult},
@@ -15,18 +16,29 @@ use crate::{cache::JsonnetASTGenerator, references::ReferenceProvider};
 
 pub struct UnusedDiagnostics {
     cache: Cache<JsonnetASTGenerator>,
+    config: UnusedVariablesConfig,
 }
 
 impl UnusedDiagnostics {
-    pub fn new(cache: Cache<JsonnetASTGenerator>) -> Self {
-        Self { cache }
+    pub fn new(cache: Cache<JsonnetASTGenerator>, config: UnusedVariablesConfig) -> Self {
+        Self { cache, config }
     }
 }
 
+#[derive(Debug)]
+struct PotentialUnused {
+    location: LocationRange,
+    name: String,
+}
+
 impl UnusedDiagnostics {
-    fn get_code_action(&self, uri: &Uri, local: &Local) -> Option<Vec<lsp_types::CodeAction>> {
-        let mut pos = local.get_identifier_position()?;
-        let name = local.get_name()?;
+    fn get_code_action(
+        &self,
+        uri: &Uri,
+        unused: &PotentialUnused,
+    ) -> Option<Vec<lsp_types::CodeAction>> {
+        let mut pos = unused.location.clone();
+        let name = unused.name.clone();
         pos.end = Location {
             line: pos.begin.line,
             column: pos.begin.column + name.len() as i32,
@@ -53,39 +65,53 @@ impl UnusedDiagnostics {
     fn get_diagnostics(&self, uri: &Uri) -> Option<Vec<DiagnosticsResult>> {
         let doc = self.cache.get_document(uri).unwrap();
         let stack = doc.get_ast().ok()?.get_complete_stack();
+        let handle_function = |func: &Function| -> Vec<PotentialUnused> {
+            func.parameters
+                .iter()
+                .map(|param| PotentialUnused {
+                    location: param.loc_range.clone(),
+                    name: param.name.0.clone(),
+                })
+                .collect()
+        };
         let locals = stack
             .stack
             .iter()
-            .flat_map(|n| {
-                if let NodeKind::DesugaredObject(obj) = n.node_kind.as_ref() {
-                    obj.locals
+            .filter_map(|n| match n.node_kind.as_ref() {
+                // XXX: This breaks with for loops
+                //NodeKind::Var(var) => {
+                //    Some(vec![PotentialUnused {
+                //        location: n.node_base.loc_range.clone(),
+                //        name: var.id.clone()?.0,
+                //    }])
+                //}
+                NodeKind::Function(func) if self.config.function_parameters => {
+                    Some(handle_function(func))
+                }
+                NodeKind::DesugaredObject(obj) if self.config.locals => {
+                    let mut obj_positions: Vec<_> = obj
+                        .locals
                         .iter()
                         .filter(|bind| bind.variable.0 != "$")
-                        .map(|bind| {
-                            Arc::new(Node {
-                                node_base: NodeBase {
-                                    loc_range: bind.loc_range.clone(),
-                                    ..n.node_base.clone()
-                                },
-                                node_kind: Box::new(NodeKind::Local(Local {
-                                    binds: vec![bind.clone()],
-                                    ..Default::default()
-                                })),
-                            })
+                        .map(|bind| PotentialUnused {
+                            location: bind.loc_range.clone(),
+                            name: bind.variable.0.clone(),
                         })
-                        .collect()
-                } else {
-                    vec![n.clone()]
+                        .collect();
+                    for obj_func in &obj.get_function_fields() {
+                        obj_positions.extend(handle_function(obj_func));
+                    }
+                    Some(obj_positions)
                 }
+                NodeKind::Local(loc) if self.config.locals => Some(vec![PotentialUnused {
+                    location: loc.get_identifier_position()?,
+                    name: loc.get_name()?,
+                }]),
+                _ => None,
             })
-            .filter_map(|n| {
-                if let NodeKind::Local(loc) = n.node_kind.as_ref() {
-                    Some(loc.clone())
-                } else {
-                    None
-                }
-            })
-            .filter(|loc| !loc.get_name().unwrap_or_default().starts_with("_"));
+            .flatten()
+            .filter(|unused| !unused.name.starts_with("_"))
+            .filter(|unused| !unused.name.starts_with("$"));
 
         let search_paths = vec![];
         let provider = ReferenceProvider::new(&self.cache, &search_paths);
@@ -93,9 +119,7 @@ impl UnusedDiagnostics {
         Some(
             locals
                 .filter(|local| {
-                    // TODO: There has to be some Rust magic for this
-                    if let Some(range) = local.get_identifier_position()
-                        && let Ok(res) = provider.references(range.begin.clone(), uri, true)
+                    if let Ok(res) = provider.references(local.location.begin.clone(), uri, true)
                         && let Some(locations) = res
                         && locations.len() == 1
                     {
@@ -104,16 +128,16 @@ impl UnusedDiagnostics {
                         false
                     }
                 })
-                .filter_map(|local| {
-                    Some(DiagnosticsResult {
+                .map(|local| {
+                    DiagnosticsResult {
                         diagnostics: Diagnostic {
                             range: Range {
-                                start: local.get_identifier_position()?.begin.clone().into(),
-                                end: local.get_identifier_position()?.end.clone().into(),
+                                start: local.location.begin.clone().into(),
+                                end: local.location.end.clone().into(),
                             },
                             message: format!(
                                 "Unused variable. If this is intentional prefix with an underscore: _{}",
-                                local.get_name().unwrap_or("<variable>".to_string())
+                                local.name
                             ),
                             code_description: Some(CodeDescription { href: uri.clone() }),
                             severity: Some(DiagnosticSeverity::WARNING),
@@ -124,7 +148,7 @@ impl UnusedDiagnostics {
                         },
                         code_actions: self.get_code_action(uri, &local).unwrap_or_default(),
                         ..Default::default()
-                    })
+                    }
                 })
                 .collect(),
         )
