@@ -15,6 +15,8 @@ variables:
   KUBERNETES_MEMORY_REQUEST: "6Gi"
   JSONNET_VERSION: "v0.21.0"
   JSONNET_VERSION_NODE: "v0.20.0"
+  GOLANG_IMAGE: golang
+  GOLANG_VERSION: 1.24
 
 include:
   - project: ct/admin/pipeline/default-pipelines
@@ -24,6 +26,16 @@ include:
       - base/generic-artifacts-jobs.yml
 
 .set-version: &set-version cargo install cargo-set-version && cargo set-version ${CI_COMMIT_TAG:-0.0.0}
+
+conform:
+  stage: test
+  image: ${GOLANG_IMAGE}:${GOLANG_VERSION}
+  variables:
+    GOBIN: "/usr/bin"
+  before_script:
+    - go install github.com/siderolabs/conform/cmd/conform@latest
+  script:
+    - conform enforce
 
 test:
   image: rust:latest
