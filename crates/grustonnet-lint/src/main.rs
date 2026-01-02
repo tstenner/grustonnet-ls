@@ -25,6 +25,35 @@ use crate::code_quality::CodeClimate;
 
 pub mod code_quality;
 
+#[derive(Clone, Debug, clap::ValueEnum, PartialEq, Eq, PartialOrd, Ord, Default)]
+enum Severity {
+    Error,
+    Warning,
+    #[default]
+    Information,
+}
+
+impl From<DiagnosticSeverity> for Severity {
+    fn from(value: DiagnosticSeverity) -> Self {
+        match value {
+            DiagnosticSeverity::WARNING => Self::Warning,
+            DiagnosticSeverity::ERROR => Self::Error,
+            DiagnosticSeverity::INFORMATION | DiagnosticSeverity::HINT => Self::Information,
+            _ => Self::default(),
+        }
+    }
+}
+
+impl From<Severity> for miette::Severity {
+    fn from(val: Severity) -> Self {
+        match val {
+            Severity::Error => miette::Severity::Error,
+            Severity::Warning => miette::Severity::Warning,
+            Severity::Information => miette::Severity::Advice,
+        }
+    }
+}
+
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
@@ -38,21 +67,9 @@ struct Args {
 
     #[arg(long, short)]
     quality_file: Option<PathBuf>,
-}
 
-trait SeverityMap {
-    fn to_miette(&self) -> miette::Severity;
-}
-
-impl SeverityMap for DiagnosticSeverity {
-    fn to_miette(&self) -> miette::Severity {
-        match *self {
-            DiagnosticSeverity::WARNING => miette::Severity::Warning,
-            DiagnosticSeverity::ERROR => miette::Severity::Error,
-            DiagnosticSeverity::INFORMATION | DiagnosticSeverity::HINT => miette::Severity::Advice,
-            _ => miette::Severity::default(),
-        }
-    }
+    #[arg(long, short)]
+    severity_threshold: Option<Severity>,
 }
 
 #[tokio::main]
@@ -79,16 +96,19 @@ async fn main() -> Result<()> {
     }));
 
     let paths: Vec<PathBuf> = if args.path.is_dir() {
-        glob::glob(&format!("{}/**/*.*sonnet", args.path.to_str().unwrap()))
-            .unwrap()
-            .filter_map(|g| {
-                if g.as_ref().ok()?.is_file() {
-                    Some(g.ok()?)
-                } else {
-                    None
-                }
-            })
-            .collect()
+        glob::glob(&format!(
+            "{}/**/*.*sonnet",
+            args.path.to_str().expect("invalid path string")
+        ))
+        .unwrap()
+        .filter_map(|g| {
+            if g.as_ref().ok()?.is_file() {
+                Some(g.ok()?)
+            } else {
+                None
+            }
+        })
+        .collect()
     } else {
         vec![args.path.clone()]
     };
@@ -109,10 +129,10 @@ async fn main() -> Result<()> {
     let filter = JsonnetDiagnosticFilter::new(server.cache.clone());
     let mut code_climates = vec![];
     for path in &paths {
-        let uri = Uri::from_path(path).unwrap();
+        let uri = Uri::from_path(path).expect("invalid uri");
         let diags = server.get_diagnostics(&uri);
         let diags = filter.filter_diagnostics(&uri, diags);
-        let content = std::fs::read_to_string(path).unwrap();
+        let content = std::fs::read_to_string(path).expect("invalid path");
         if !diags.is_empty() {
             eprintln!("Lint results for {:?}", path);
         }
@@ -135,12 +155,15 @@ async fn main() -> Result<()> {
                     fix_text.unwrap_or_default()
                 ),
             )]);
-            miette_diag.severity = Some(
-                diag.diagnostics
-                    .severity
-                    .unwrap_or(DiagnosticSeverity::ERROR)
-                    .to_miette(),
-            );
+            let severity: Severity = diag
+                .diagnostics
+                .severity
+                .unwrap_or(DiagnosticSeverity::ERROR)
+                .into();
+            if severity > args.severity_threshold.clone().unwrap_or_default() {
+                continue;
+            }
+            miette_diag.severity = Some(severity.into());
             let report = miette::Report::from(miette_diag).with_source_code(source);
             eprintln!("{:?}", report)
         }
