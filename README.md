@@ -165,7 +165,7 @@ grustonnet-ls --export-config-schema
 * [x] Commands
     * [x] Evaluate file
 * [ ] Missing LSP features
-    * [ ] Code actions
+    * [x] Code actions
     * [ ] Code Lense?
     * [ ] Hover
     * [ ] Document highlight
