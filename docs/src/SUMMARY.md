@@ -5,5 +5,6 @@
 - [Setup](./setup.md)
     - [Install]()
     - [Editor Setup](./editors.md)
+- [Development](./development.md)
 - [Showcase](./showcase.md)
 
