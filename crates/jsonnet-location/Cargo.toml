@@ -9,6 +9,6 @@ workspace = true
 [dependencies]
 bincode = "2.0.1"
 lsp-types = { version = "0.97.0", features = ["proposed"] }
-serde = { version = "1.0.219", features = ["derive", "rc"] }
-tree-sitter = "0.25.10"
+serde.workspace = true
+tree-sitter.workspace = true
 language-server = { path = "../language-server"}
