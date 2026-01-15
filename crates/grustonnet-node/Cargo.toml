@@ -9,7 +9,7 @@ workspace = true
 [dependencies]
 bincode = "2.0.1"
 lsp-types = { version = "0.97.0", features = ["proposed"] }
-serde = { version = "1.0.219", features = ["derive", "rc"] }
+serde.workspace = true
 tree-sitter = "0.25.10"
 language-server = { path = "../language-server"}
 jsonnet-location = { path = "../jsonnet-location"}
