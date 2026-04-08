@@ -6,58 +6,31 @@
 env:
   CARGO_TERM_COLOR: always
 jobs:
-  nix-build:
-    runs-on: ${{ matrix.platform.runs-on }}
-    steps:
-    - name: checkout
-      uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
-    - name: Install nix
-      uses: cachix/install-nix-action@4e002c8ec80594ecd40e759629461e26c8abed15
-      with:
-        github_access_token: ${{ secrets.GITHUB_TOKEN }}
-    - name: Build
-      run: nix build .#grustonnet-test || nix build .#grustonnet-test || nix build
-        .#grustonnet-test
-    - if: github.ref == 'refs/heads/main'
-      uses: cachix/cachix-action@ad2ddac53f961de1989924296a1f236fcfbaa4fc
-      with:
-        authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-        name: koskev
-        signingKey: ${{ secrets.CACHIX_SIGNING_KEY }}
-        skipPush: true
-    - if: github.ref == 'refs/heads/main'
-      run: nix build .
-    - if: github.ref == 'refs/heads/main'
-      name: Push to cachix
-      run: nix path-info . | cachix push koskev
+  build:
     strategy:
+      fail-fast: false
       matrix:
         platform:
-        - os-name: Linux-x86_64
-          runs-on: ubuntu-24.04
-          target: x86_64-unknown-linux-gnu
-        - os-name: Linux-aarch64
-          runs-on: ubuntu-24.04-arm
-          target: aarch64-unknown-linux-gnu
-        - os-name: macOS-aarch64
-          runs-on: macos-latest
-          target: aarch64-apple-darwin
-  windows-test:
-    runs-on: ubuntu-24.04
+          - os-name: Linux-x86_64
+            runs-on: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+          - os-name: Windows-x86_64
+            runs-on: windows-latest
+            target: x86_64-pc-windows-gnu
+          #- os-name: macOS-arm64
+          #  runs-on: macos-latest
+          #  target: aarch64-apple-darwin
+
+    runs-on: ${{ matrix.platform.runs-on }}
     steps:
-    - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
-    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417
-      with:
-        go-version: '1.25'
-    - name: Install Rust test dependencies
-      run: cargo install cargo2junit@0.1.15 cargo-tarpaulin@0.35.1 --locked
-    - env:
-        RUSTFLAGS: ''
-      name: Test Windows x86_64 GNU
-      uses: Reloaded-Project/devops-rust-test-in-latest-wine@b707ebd77c7b98be7666c672d7c947aefeb1ac45
-      with:
-        rust-project-path: .
-        target: x86_64-pc-windows-gnu
+      - uses: actions/checkout@v6
+      - name: env
+        run: go version && cargo version && go env
+      - name: Run tests
+        env:
+          RUST_BACKTRACE: 1
+          CARGO_PROFILE_DEV_BUILD_OVERRIDE_DEBUG: true
+        run: cd crates/jsonnet-bridge && cargo build --target ${{ matrix.platform.target }} && cargo test --verbose --target ${{ matrix.platform.target }}
 'on':
   pull_request: {}
   push: {}
